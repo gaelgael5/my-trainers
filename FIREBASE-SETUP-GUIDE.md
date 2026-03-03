@@ -42,7 +42,8 @@ firebase login:ci
 ### Dans Firebase Console
 1. Cliquer **"Ajouter une app"** → **Android**
 2. Package Android : `com.mycoach.app`
-3. Télécharger `google-services.json`
+3. Nom app : `M-Trainers`
+4. Télécharger `google-services.json`
 4. **NE PAS COMMITER ce fichier** (déjà dans .gitignore)
 
 ### Configuration Flutter
