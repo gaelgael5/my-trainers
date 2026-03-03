@@ -1,0 +1,38 @@
+name: Backend Docker Hub Build
+
+on:
+  push:
+    branches: [ dev ]
+    paths: 
+      - 'backend/**'
+      - '.github/workflows/backend-dockerhub.yml'
+
+env:
+  REGISTRY: docker.io  # ← Docker Hub !
+  IMAGE_NAME: ${{ secrets.DOCKER_USER }}/mycoach-backend
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USER }}
+        password: ${{ secrets.DOCKER_PASS }}
+        
+    - name: Extract build ID
+      run: echo "BUILD_ID=${GITHUB_SHA::7}" >> $GITHUB_ENV
+      
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        push: true
+        tags: |
+          ${{ env.IMAGE_NAME }}:dev${{ env.BUILD_ID }}
+          ${{ env.IMAGE_NAME }}:latest

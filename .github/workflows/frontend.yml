@@ -1,14 +1,14 @@
-name: Flutter Build (Safe Mode)
+name: Flutter Firebase Deploy
 
 on:
   push:
     branches: [ dev ]
     paths:
       - 'flutter/**'
-      - '.github/workflows/frontend-fixed.yml'
+      - '.github/workflows/frontend-firebase.yml'
 
 jobs:
-  flutter-check:
+  build-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
@@ -18,66 +18,48 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.16.0'
+        flutter-version: '3.19.0'
         
-    - name: Check Flutter project structure
+    - name: Flutter pub get
       run: |
         cd flutter
-        echo "=== Flutter project structure ==="
-        ls -la
-        echo "=== pubspec.yaml content ==="
-        cat pubspec.yaml || echo "No pubspec.yaml"
+        flutter pub get
         
-    - name: Flutter doctor
-      run: flutter doctor -v
-        
-    - name: Create minimal Flutter project if needed
+    - name: Build Web
       run: |
         cd flutter
-        if [ ! -d "android" ]; then
-          echo "Creating Android directory..."
-          flutter create --platforms android,web . --project-name mycoach || echo "Flutter create failed"
-        fi
+        flutter build web --release
         
-    - name: Flutter pub get (safe)
+    - name: Build APK (Debug for testing)
       run: |
         cd flutter
-        flutter pub get || echo "Pub get failed"
+        flutter build apk --debug
         
-    - name: Flutter analyze (safe)
-      run: |
-        cd flutter
-        flutter analyze || echo "Analysis failed"
+    - name: Upload APK to Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: mycoach-debug-apk
+        path: flutter/build/app/outputs/flutter-apk/app-debug.apk
         
-    - name: Flutter test (safe)
-      run: |
-        cd flutter
-        flutter test || echo "Tests failed or not found"
-        
-    - name: Build web (if possible)
-      run: |
-        cd flutter
-        if [ -d "web" ]; then
-          flutter build web --release || echo "Web build failed"
-        else
-          echo "Web directory not found, skipping web build"
-        fi
-        
-    - name: Build APK (if possible) 
-      run: |
-        cd flutter
-        if [ -d "android" ]; then
-          flutter build apk --debug || echo "APK build failed"
-        else
-          echo "Android directory not found, skipping APK build"
-        fi
+    - name: Install Firebase CLI
+      run: npm install -g firebase-tools
       
-    - name: List build outputs
+    - name: Deploy to Firebase Hosting  
       run: |
-        echo "=== Build outputs ==="
-        find flutter/ -name "*.apk" -o -name "index.html" -o -name "main.dart.js" 2>/dev/null || echo "No build outputs found"
-        
-    - name: Notify status
-      if: always()
+        cd flutter
+        firebase deploy --only hosting \
+          --project "${{ secrets.FIREBASE_PROJECT_ID }}" \
+          --token "${{ secrets.FIREBASE_TOKEN }}" \
+          --non-interactive
+          
+    - name: Deploy APK to Firebase App Distribution
       run: |
-        echo "Flutter build check completed with status: ${{ job.status }}"
+        cd flutter
+        firebase appdistribution:distribute \
+          build/app/outputs/flutter-apk/app-debug.apk \
+          --app "${{ secrets.FIREBASE_APP_ID }}" \
+          --token "${{ secrets.FIREBASE_TOKEN }}" \
+          --groups "mycoach-testers" \
+          --release-notes "Build automatique depuis commit ${{ github.sha }}" \
+          --non-interactive
+      continue-on-error: true
