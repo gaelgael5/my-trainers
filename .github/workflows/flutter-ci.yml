@@ -5,7 +5,7 @@ on:
     paths:
       - 'flutter/**'
       - '.github/workflows/flutter-ci.yml'
-    branches: ['dev', 'main']
+    branches: ['dev']
   pull_request:
     paths:
       - 'flutter/**'
