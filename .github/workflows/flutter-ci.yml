@@ -33,14 +33,18 @@ jobs:
       - name: Set environment variables
         id: env
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "ENV=prod" >> $GITHUB_OUTPUT
-            echo "BUILD_MODE=release" >> $GITHUB_OUTPUT
-            echo "APK_NAME=my-trainers-prod" >> $GITHUB_OUTPUT
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            {
+              echo "ENV=prod"
+              echo "BUILD_MODE=release"
+              echo "APK_NAME=my-trainers-prod"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "ENV=dev" >> $GITHUB_OUTPUT
-            echo "BUILD_MODE=debug" >> $GITHUB_OUTPUT
-            echo "APK_NAME=my-trainers-dev" >> $GITHUB_OUTPUT
+            {
+              echo "ENV=dev"
+              echo "BUILD_MODE=debug"
+              echo "APK_NAME=my-trainers-dev"
+            } >> "$GITHUB_OUTPUT"
           fi
 
       - name: Setup Java
