@@ -1,0 +1,61 @@
+name: Test Auto Trigger
+
+on:
+  push:
+    branches: [ dev ]
+  # Pas de filtre 'paths' - se déclenche sur TOUT push vers dev
+
+jobs:
+  test-automation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Test Auto Trigger Success
+      run: |
+        echo "🎉 SUCCESS: Auto-trigger fonctionne !"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Timestamp: $(date)"
+        
+    - name: Check Directory Structure
+      run: |
+        echo "📁 Repository structure:"
+        find . -name "*.yml" -path "*/.github/workflows/*" | head -10
+        
+    - name: Check Flutter Directory  
+      run: |
+        if [ -d "flutter" ]; then
+          echo "✅ Flutter directory exists"
+          echo "📱 Flutter files:"
+          find flutter -name "*.dart" | head -5
+        else
+          echo "❌ Flutter directory not found"
+        fi
+        
+    - name: Check Backend Directory
+      run: |
+        if [ -d "backend" ]; then
+          echo "✅ Backend directory exists"  
+          echo "🐍 Backend files:"
+          find backend -name "*.py" | head -5
+        else
+          echo "❌ Backend directory not found"
+        fi
+        
+    - name: Report Success to Discord
+      if: always()
+      run: |
+        STATUS="${{ job.status }}"
+        COLOR="3066993"
+        if [ "$STATUS" != "success" ]; then COLOR="15158332"; fi
+        
+        echo "Would send Discord notification:"
+        echo "Status: $STATUS"
+        echo "Message: Auto-trigger test completed on dev branch"
+        # Optionnel: décommenter si DISCORD_WEBHOOK_URL configuré
+        # curl -H "Content-Type: application/json" \
+        # -d "{\"embeds\":[{\"title\":\"Auto-Trigger Test $STATUS\",\"description\":\"Branch: dev | Commit: ${{ github.sha }}\",\"color\":$COLOR}]}" \
+        # ${{ secrets.DISCORD_WEBHOOK_URL || 'https://httpbin.org/post' }}
