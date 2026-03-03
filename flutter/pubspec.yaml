@@ -1,15 +1,14 @@
 name: mycoach
-description: "Application de coaching sportif MyCoach"
+description: "my-trainer - Personal training companion app"
 publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.1.0 <4.0.0'
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.2
 
 dev_dependencies:
   flutter_test:

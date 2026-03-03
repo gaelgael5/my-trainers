@@ -1,114 +1,76 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyTrainerApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyTrainerApp extends StatelessWidget {
+  const MyTrainerApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MyCoach',
+      title: 'my-trainer',
       debugShowCheckedModeBanner: false,
-      home: MyHomePage(),
+      theme: ThemeData(
+        primarySwatch: Colors.teal,
+        useMaterial3: true,
+      ),
+      home: const MyHomePage(),
     );
   }
 }
 
-class MyHomePage extends StatelessWidget {
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key});
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  int _counter = 0;
+
+  void _incrementCounter() {
+    setState(() {
+      _counter++;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F23),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF8B5CF6),
-        title: const Text(
-          'MyCoach MVP',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: const Text('my-trainer'),
       ),
-      body: const Center(
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.fitness_center,
-              size: 80,
-              color: Color(0xFF8B5CF6),
+          children: <Widget>[
+            const Text(
+              'Welcome to my-trainer:',
             ),
-            SizedBox(height: 24),
             Text(
-              'MyCoach',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+              '$_counter',
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
-            SizedBox(height: 12),
-            Text(
-              'Application de coaching sportif',
+            const SizedBox(height: 20),
+            const Text(
+              'Your personal training companion',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.white70,
-              ),
-            ),
-            SizedBox(height: 32),
-            Card(
-              color: Color(0xFF8B5CF6),
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.person_4,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Interface Coach',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(height: 16),
-            Card(
-              color: Color(0xFF06B6D4),
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.person,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Interface Client',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+                color: Colors.teal,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _incrementCounter,
+        tooltip: 'Increment',
+        child: const Icon(Icons.add),
       ),
     );
   }
