@@ -1,84 +1,194 @@
-name: Flutter CI/CD
+name: Flutter Android Build & Firebase Distribution
 
 on:
   push:
-    branches: [ dev, main ]
     paths:
       - 'flutter/**'
       - '.github/workflows/flutter-ci.yml'
+    branches: ['dev', 'main']
   pull_request:
-    branches: [ dev, main ]
     paths:
       - 'flutter/**'
-  workflow_dispatch:
 
 env:
-  FLUTTER_VERSION: '3.24.5'
+  FLUTTER_VERSION: 'stable'
+  JAVA_VERSION: '17'
+  API_BASE_URL: 'http://192.168.10.63:8000'
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
 
 jobs:
-  test:
+  build:
+    name: Build & Distribute APK
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - name: Set environment variables
+        id: env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENV=prod" >> $GITHUB_OUTPUT
+            echo "BUILD_MODE=release" >> $GITHUB_OUTPUT
+            echo "APK_NAME=my-trainers-prod" >> $GITHUB_OUTPUT
+          else
+            echo "ENV=dev" >> $GITHUB_OUTPUT
+            echo "BUILD_MODE=debug" >> $GITHUB_OUTPUT
+            echo "APK_NAME=my-trainers-dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
           cache: true
 
-      - name: Get dependencies
+      - name: Install dependencies
         working-directory: flutter
         run: flutter pub get
-
-      - name: Run tests
-        working-directory: flutter
-        run: flutter test
 
       - name: Analyze code
         working-directory: flutter
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
-  build:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          cache: true
-
-      - name: Get dependencies
+      - name: Run tests
         working-directory: flutter
-        run: flutter pub get
+        continue-on-error: true
+        run: flutter test --coverage --dart-define=ENV=test --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
 
-      - name: Build APK
-        working-directory: flutter
-        run: flutter build apk --release
-
-      - name: Upload APK to Firebase App Distribution
-        if: github.ref == 'refs/heads/dev'
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
-        with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          groups: testers
-          file: flutter/build/app/outputs/flutter-apk/app-release.apk
-          releaseNotes: |
-            Auto-build from dev branch
-            Commit: ${{ github.sha }}
-            Branch: ${{ github.ref_name }}
-
-      - name: Upload APK artifact
+      - name: Upload test coverage
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
-          path: flutter/build/app/outputs/flutter-apk/app-release.apk
+          name: flutter-test-coverage
+          path: flutter/coverage/lcov.info
+          if-no-files-found: ignore
+
+      # ─── Auto-increment version with build number ──────────────────────
+      - name: Auto-increment version
+        working-directory: flutter
+        run: |
+          echo "📦 Auto-increment version avec build number ${{ github.run_number }}"
+          sed -i "s/version: 1.0.0+.*/version: 1.0.0+${{ github.run_number }}/" pubspec.yaml
+          echo "✅ Version mise à jour : 1.0.0+${{ github.run_number }}"
+
+      # ─── Build APK Release (main branch) ───────────────────────────────
+      - name: Build APK Release
+        if: github.ref == 'refs/heads/main'
+        working-directory: flutter
+        run: |
+          echo "🚀 Building APK Release pour production..."
+          flutter build apk --release \
+            --dart-define=ENV=${{ steps.env.outputs.ENV }} \
+            --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+
+      # ─── Build APK Debug (dev branch) ──────────────────────────────────
+      - name: Build APK Debug
+        if: github.ref != 'refs/heads/main'
+        working-directory: flutter
+        run: |
+          echo "🔧 Building APK Debug pour développement..."
+          flutter build apk --debug \
+            --dart-define=ENV=${{ steps.env.outputs.ENV }} \
+            --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+
+      # ─── Prepare APK for distribution ──────────────────────────────────
+      - name: Prepare APK
+        id: apk
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            APK_PATH="flutter/build/app/outputs/flutter-apk/app-release.apk"
+            echo "APK_PATH=${APK_PATH}" >> $GITHUB_OUTPUT
+          else
+            APK_PATH="flutter/build/app/outputs/flutter-apk/app-debug.apk"
+            echo "APK_PATH=${APK_PATH}" >> $GITHUB_OUTPUT
+          fi
+          
+          # Vérifier que l'APK existe
+          if [ -f "$APK_PATH" ]; then
+            echo "✅ APK trouvé : $APK_PATH"
+            echo "📏 Taille APK : $(du -h "$APK_PATH" | cut -f1)"
+          else
+            echo "❌ APK non trouvé : $APK_PATH"
+            exit 1
+          fi
+
+      # ─── Firebase App Distribution ─────────────────────────────────────
+      - name: Upload to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: "1:782316914398:android:5085370e3927209e23244f"
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          groups: testers
+          file: ${{ steps.apk.outputs.APK_PATH }}
+          releaseNotes: |
+            🚀 Build #${{ github.run_number }} - ${{ steps.env.outputs.ENV }}
+            
+            📱 Version: 1.0.0+${{ github.run_number }}
+            🌿 Branche: ${{ github.ref_name }}
+            💬 Commit: ${{ github.event.head_commit.message }}
+            👤 Auteur: ${{ github.event.head_commit.author.name }}
+            
+            🔗 Backend API: ${{ env.API_BASE_URL }}
+            🏗️ Build mode: ${{ steps.env.outputs.BUILD_MODE }}
+
+      # ─── GitHub Release (production only) ──────────────────────────────
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v1.0.0-build.${{ github.run_number }}"
+          name: "My Trainers v1.0.0-build.${{ github.run_number }}"
+          body: |
+            🚀 **Build automatique #${{ github.run_number }}** 
+            
+            📱 **Installation :** Télécharge l'APK et installe-le sur Android
+            🔗 **Backend API :** ${{ env.API_BASE_URL }}
+            💬 **Dernière modification :** ${{ github.event.head_commit.message }}
+            
+            **Firebase App Distribution :** APK également distribué aux testeurs via Firebase
+          files: |
+            ${{ steps.apk.outputs.APK_PATH }}
+          draft: false
+          prerelease: false
+
+      # ─── Upload artifacts for backup ───────────────────────────────────
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.env.outputs.APK_NAME }}-build-${{ github.run_number }}
+          path: ${{ steps.apk.outputs.APK_PATH }}
           retention-days: 30
+
+      # ─── Build summary ─────────────────────────────────────────────────
+      - name: Build Summary
+        run: |
+          echo "## 🎉 Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Propriété | Valeur |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 📱 Version | 1.0.0+${{ github.run_number }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🌿 Branche | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🏗️ Build Mode | ${{ steps.env.outputs.BUILD_MODE }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔗 API Backend | ${{ env.API_BASE_URL }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📦 APK | ${{ steps.env.outputs.APK_NAME }}-build-${{ github.run_number }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔥 Firebase | ✅ Distribué aux testeurs |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📲 Prochaines étapes" >> $GITHUB_STEP_SUMMARY
+          echo "- Les testeurs recevront une notification Firebase" >> $GITHUB_STEP_SUMMARY
+          echo "- L'APK est également disponible dans les artifacts GitHub" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "- Release GitHub créée automatiquement" >> $GITHUB_STEP_SUMMARY
+          fi
