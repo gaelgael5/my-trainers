@@ -5,7 +5,7 @@ on:
     branches: [ dev ]
     paths:
       - 'flutter/**'
-      - '.github/workflows/frontend-firebase.yml'
+      - '.github/workflows/frontend.yml'
 
 jobs:
   build-and-deploy:
