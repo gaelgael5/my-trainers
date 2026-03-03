@@ -59,7 +59,7 @@ jobs:
           build/app/outputs/flutter-apk/app-debug.apk \
           --app "${{ secrets.FIREBASE_APP_ID }}" \
           --token "${{ secrets.FIREBASE_TOKEN }}" \
-          --groups "mycoach-testers" \
+          --testers "gaelbeard@example.com" \
           --release-notes "Build automatique depuis commit ${{ github.sha }}" \
           --non-interactive
       continue-on-error: true
