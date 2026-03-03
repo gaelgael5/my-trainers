@@ -1,0 +1,85 @@
+name: Flutter Firebase Deploy
+
+on:
+  push:
+    branches: [ dev ]
+    paths:
+      - 'flutter/**'
+      - '.github/workflows/frontend.yml'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.16.0'
+        
+    - name: Flutter pub get
+      run: |
+        cd flutter
+        flutter pub get
+        
+    - name: Flutter analyze
+      run: |
+        cd flutter
+        flutter analyze
+        
+    - name: Flutter test
+      run: |
+        cd flutter
+        flutter test
+        
+    - name: Build APK
+      run: |
+        cd flutter
+        flutter build apk --release
+        
+    - name: Build Web
+      run: |
+        cd flutter
+        flutter build web --release
+        
+    - name: Upload APK to Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: app-release-apk
+        path: flutter/build/app/outputs/flutter-apk/app-release.apk
+        
+    - name: Install Firebase CLI
+      run: npm install -g firebase-tools
+      
+    - name: Deploy to Firebase App Distribution
+      run: |
+        cd flutter
+        firebase appdistribution:distribute \
+          build/app/outputs/flutter-apk/app-release.apk \
+          --app "${{ secrets.FIREBASE_APP_ID }}" \
+          --token "${{ secrets.FIREBASE_TOKEN }}" \
+          --groups "mycoach-testers" \
+          --release-notes "Build from commit ${{ github.sha }}"
+      continue-on-error: true
+      
+    - name: Deploy to Firebase Hosting  
+      run: |
+        cd flutter
+        firebase deploy --only hosting \
+          --project "${{ secrets.FIREBASE_PROJECT_ID }}" \
+          --token "${{ secrets.FIREBASE_TOKEN }}"
+      continue-on-error: true
+      
+    - name: Notify Discord
+      if: always()
+      run: |
+        STATUS="${{ job.status }}"
+        COLOR="3066993"
+        if [ "$STATUS" != "success" ]; then COLOR="15158332"; fi
+        
+        curl -H "Content-Type: application/json" \
+        -d "{\"embeds\":[{\"title\":\"Flutter Build $STATUS\",\"description\":\"APK + Firebase Deploy\",\"color\":$COLOR}]}" \
+        ${{ secrets.DISCORD_WEBHOOK_URL || 'https://httpbin.org/post' }}
