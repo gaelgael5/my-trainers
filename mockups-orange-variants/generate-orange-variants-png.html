@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur PNG Variantes Orange Flashy</title>
+    <style>
+        body {
+            font-family: 'Space Grotesk', -apple-system, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #0A0E1A 0%, #1A1F2E 100%);
+            color: #FFFFFF;
+            min-height: 100vh;
+        }
+        .generator {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .title {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FF4500, #FF6B35, #FF8C42);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 16px;
+            color: #B8C4D6;
+        }
+        
+        .variant-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .variant-card {
+            background: rgba(255, 69, 0, 0.1);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+        }
+        
+        .variant-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #FF6B35;
+            margin-bottom: 12px;
+        }
+        
+        .variant-description {
+            font-size: 14px;
+            color: #B8C4D6;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .variant-preview {
+            width: 200px;
+            height: 434px;
+            border: 2px solid #FF6B35;
+            border-radius: 20px;
+            margin: 0 auto 20px;
+            overflow: hidden;
+            background: #0A0E1A;
+            position: relative;
+        }
+        
+        .variant-iframe {
+            width: 375px;
+            height: 812px;
+            border: none;
+            transform: scale(0.533);
+            transform-origin: 0 0;
+            margin: -150px 0 -200px -50px;
+        }
+        
+        .generate-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #FF4500, #FF6B35);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 69, 0, 0.4);
+        }
+        
+        .generate-all {
+            text-align: center;
+            margin: 40px 0;
+        }
+        
+        .generate-all-btn {
+            background: linear-gradient(135deg, #FF4500, #FF8C42);
+            border: none;
+            border-radius: 16px;
+            padding: 18px 36px;
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .generate-all-btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 40px rgba(255, 69, 0, 0.6);
+        }
+        
+        .status {
+            background: rgba(255, 69, 0, 0.1);
+            border: 1px solid rgba(255, 69, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .download-section {
+            background: rgba(255, 69, 0, 0.05);
+            border: 1px solid rgba(255, 69, 0, 0.2);
+            border-radius: 16px;
+            padding: 30px;
+            margin-top: 40px;
+        }
+        
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .download-item {
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .download-name {
+            font-weight: 600;
+            color: #FF6B35;
+            margin-bottom: 8px;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #FF5722, #FF7043);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="generator">
+        <div class="header">
+            <h1 class="title">MyCoach Orange Flashy</h1>
+            <p class="subtitle">Générateur PNG des 4 variantes orange flashy pour l'interface Coach</p>
+        </div>
+
+        <div class="variant-grid">
+            <div class="variant-card">
+                <h3 class="variant-title">V1 - Orange Équilibré</h3>
+                <p class="variant-description">
+                    Version équilibrée avec orange flashy dominant sur les éléments principaux. 
+                    Gradients orange subtils et background sombre pour un bon contraste.
+                </p>
+                <div class="variant-preview">
+                    <iframe src="./login-coach-orange-v1.html" class="variant-iframe" id="iframe-v1"></iframe>
+                </div>
+                <button class="generate-btn" onclick="generatePNG('v1', 'Orange Équilibré')">
+                    📸 Générer PNG V1
+                </button>
+            </div>
+
+            <div class="variant-card">
+                <h3 class="variant-title">V2 - Orange Néon Premium</h3>
+                <p class="variant-description">
+                    Version néon avec effets glow orange renforcés. Tous les éléments interactifs 
+                    en orange néon avec animations pulsing sophistiquées.
+                </p>
+                <div class="variant-preview">
+                    <iframe src="./login-coach-orange-v2.html" class="variant-iframe" id="iframe-v2"></iframe>
+                </div>
+                <button class="generate-btn" onclick="generatePNG('v2', 'Orange Néon Premium')">
+                    📸 Générer PNG V2
+                </button>
+            </div>
+
+            <div class="variant-card">
+                <h3 class="variant-title">V3 - Orange Flashy Maximal</h3>
+                <p class="variant-description">
+                    Version maximale avec orange présent partout. Container teinté orange, 
+                    effets ultra flashy et animations explosives pour un impact visuel maximum.
+                </p>
+                <div class="variant-preview">
+                    <iframe src="./login-coach-orange-v3.html" class="variant-iframe" id="iframe-v3"></iframe>
+                </div>
+                <button class="generate-btn" onclick="generatePNG('v3', 'Orange Flashy Maximal')">
+                    📸 Générer PNG V3
+                </button>
+            </div>
+
+            <div class="variant-card">
+                <h3 class="variant-title">V4 - Orange Gradient Sophistiqué</h3>
+                <p class="variant-description">
+                    Version sophistiquée avec gradients orange complexes multi-stops et glassmorphism 
+                    orange avancé. Design premium avec effets subtils et élégants.
+                </p>
+                <div class="variant-preview">
+                    <iframe src="./login-coach-orange-v4.html" class="variant-iframe" id="iframe-v4"></iframe>
+                </div>
+                <button class="generate-btn" onclick="generatePNG('v4', 'Orange Gradient Sophistiqué')">
+                    📸 Générer PNG V4
+                </button>
+            </div>
+        </div>
+
+        <div class="generate-all">
+            <button class="generate-all-btn" onclick="generateAllPNGs()">
+                🔥 Générer toutes les variantes PNG
+            </button>
+        </div>
+
+        <div id="status" class="status" style="display: none;">
+            <h3 id="status-text">Génération en cours...</h3>
+            <div id="progress"></div>
+        </div>
+
+        <div class="download-section">
+            <h3 style="color: #FF6B35; text-align: center; margin-bottom: 10px;">📱 Livrables PNG Générés</h3>
+            <p style="text-align: center; color: #B8C4D6; margin-bottom: 20px;">
+                Format : 375x812px (iPhone 13) - Prêts pour présentation client
+            </p>
+            
+            <div class="download-grid">
+                <div class="download-item">
+                    <div class="download-name">login-coach-orange-v1.png</div>
+                    <button class="download-btn" onclick="downloadManual('v1')">⬇️ Télécharger</button>
+                </div>
+                <div class="download-item">
+                    <div class="download-name">login-coach-orange-v2.png</div>
+                    <button class="download-btn" onclick="downloadManual('v2')">⬇️ Télécharger</button>
+                </div>
+                <div class="download-item">
+                    <div class="download-name">login-coach-orange-v3.png</div>
+                    <button class="download-btn" onclick="downloadManual('v3')">⬇️ Télécharger</button>
+                </div>
+                <div class="download-item">
+                    <div class="download-name">login-coach-orange-v4.png</div>
+                    <button class="download-btn" onclick="downloadManual('v4')">⬇️ Télécharger</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function generatePNG(version, name) {
+            const iframe = document.getElementById(`iframe-${version}`);
+            const status = document.getElementById('status');
+            const statusText = document.getElementById('status-text');
+            
+            status.style.display = 'block';
+            statusText.textContent = `📸 Capture de ${name} en cours...`;
+            
+            try {
+                // Attendre que l'iframe soit complètement chargée
+                await new Promise(resolve => {
+                    if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {
+                        resolve();
+                    } else {
+                        iframe.onload = resolve;
+                    }
+                });
+                
+                // Attendre un peu plus pour les animations
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Capturer avec html2canvas si disponible, sinon instructions manuelles
+                if (window.html2canvas) {
+                    const canvas = await html2canvas(iframe.contentDocument.body, {
+                        width: 375,
+                        height: 812,
+                        scale: 2
+                    });
+                    
+                    // Télécharger
+                    const link = document.createElement('a');
+                    link.download = `login-coach-orange-${version}.png`;
+                    link.href = canvas.toDataURL();
+                    link.click();
+                    
+                    statusText.textContent = `✅ ${name} généré avec succès !`;
+                } else {
+                    statusText.innerHTML = `
+                        <strong>Instructions de capture manuelle :</strong><br>
+                        1. Faire un clic droit sur l'aperçu ${name}<br>
+                        2. Choisir "Inspecter l'élément"<br>
+                        3. Aller dans l'onglet Console<br>
+                        4. Taper : document.querySelector('iframe').contentWindow.print()<br>
+                        5. Sauvegarder en PDF puis convertir en PNG 375x812px
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Erreur de capture:', error);
+                statusText.textContent = `❌ Erreur lors de la capture de ${name}`;
+            }
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 3000);
+        }
+        
+        async function generateAllPNGs() {
+            const variants = [
+                { version: 'v1', name: 'Orange Équilibré' },
+                { version: 'v2', name: 'Orange Néon Premium' },
+                { version: 'v3', name: 'Orange Flashy Maximal' },
+                { version: 'v4', name: 'Orange Gradient Sophistiqué' }
+            ];
+            
+            for (let i = 0; i < variants.length; i++) {
+                const variant = variants[i];
+                await generatePNG(variant.version, variant.name);
+                
+                // Délai entre captures
+                if (i < variants.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                }
+            }
+            
+            const statusText = document.getElementById('status-text');
+            statusText.textContent = '🎉 Toutes les variantes orange flashy ont été générées !';
+        }
+        
+        function downloadManual(version) {
+            // Ouvrir l'iframe en plein écran pour capture manuelle
+            const iframe = document.getElementById(`iframe-${version}`);
+            const newWindow = window.open(iframe.src, `coach-orange-${version}`, 'width=375,height=812');
+            
+            setTimeout(() => {
+                alert(`Fenêtre ouverte pour ${version}.\n\nPour capturer :\n1. Ajustez la fenêtre à 375x812px\n2. Prenez une capture d'écran\n3. Sauvegardez sous "login-coach-orange-${version}.png"`);
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

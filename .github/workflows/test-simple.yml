@@ -1,0 +1,12 @@
+name: Test Simple
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Test basic
+      run: echo "Workflow triggered successfully!"
