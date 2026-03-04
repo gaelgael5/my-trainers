@@ -14,7 +14,6 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
-  DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
 jobs:
   test:
@@ -69,7 +68,7 @@ jobs:
         working-directory: backend
         run: pytest tests/ -v --cov=app --cov-report=xml --cov-append
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: "postgresql://mycoach:mycoach_test@localhost:5432/mycoach_test"
           TESTING: "1"
 
   security:
@@ -112,11 +111,7 @@ jobs:
 
       - name: Test Docker image
         run: |
-          TESTING: "1"
-
-      - name: Run full tests with DB
-        working-directory: backend
-        run: pytest tests/ -v --cov=app --cov-report=xml --cov-append
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          TESTING: "1"
+          docker run --rm -e TESTING=1 -p 8001:8000 -d --name backend-test trainers-backend:latest
+          sleep 10
+          curl -f http://localhost:8001/health || exit 1
+          docker stop backend-test
