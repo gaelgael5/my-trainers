@@ -107,9 +107,16 @@ jobs:
       - name: Build Docker image
         working-directory: backend
         run: |
-          docker build -t mycoach-backend:${{ github.sha }} .
-          docker tag mycoach-backend:${{ github.sha }} mycoach-backend:latest
+          docker build -t trainers-backend:${{ github.sha }} .
+          docker tag trainers-backend:${{ github.sha }} trainers-backend:latest
 
       - name: Test Docker image
         run: |
-          docker run --rm mycoach-backend:${{ github.sha }} python -c "import app; print('Docker image OK')"
+          TESTING: "1"
+
+      - name: Run full tests with DB
+        working-directory: backend
+        run: pytest tests/ -v --cov=app --cov-report=xml --cov-append
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TESTING: "1"
