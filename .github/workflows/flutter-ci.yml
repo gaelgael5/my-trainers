@@ -16,7 +16,7 @@ env:
 
 concurrency:
   group: flutter-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -25,6 +25,7 @@ jobs:
   build:
     name: Build APK
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -82,9 +83,29 @@ jobs:
         working-directory: flutter
         run: flutter analyze --no-fatal-infos
 
-      - name: Run tests
+      - name: Test health check
         working-directory: flutter
-        run: flutter test --coverage --dart-define=ENV=test --dart-define=API_BASE_URL=http://localhost:8000
+        timeout-minutes: 2
+        run: |
+          echo "🔍 Checking test environment..."
+          flutter test --list-tests --dart-define=ENV=test
+          echo "✅ Test environment looks good"
+
+      - name: Run tests (fast)
+        working-directory: flutter
+        timeout-minutes: 5
+        run: |
+          echo "🧪 Running Flutter tests (without coverage)..."
+          flutter test --dart-define=ENV=test --dart-define=API_BASE_URL=http://localhost:8000 --timeout=30s --concurrency=1
+          echo "✅ Tests completed successfully"
+
+      - name: Run tests with coverage
+        working-directory: flutter
+        timeout-minutes: 10
+        run: |
+          echo "📊 Running Flutter tests with coverage..."
+          flutter test --coverage --dart-define=ENV=test --dart-define=API_BASE_URL=http://localhost:8000 --timeout=30s --concurrency=1 || true
+          echo "ℹ️ Coverage tests completed (non-blocking)"
 
       - name: Upload coverage
         if: always()
