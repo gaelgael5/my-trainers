@@ -57,11 +57,10 @@ jobs:
 
       - name: Analyze
         working-directory: flutter
-        run: flutter analyze --no-fatal-infos || true
+        run: flutter analyze --no-fatal-infos
 
       - name: Run tests
         working-directory: flutter
-        continue-on-error: true
         run: flutter test --coverage --dart-define=ENV=test --dart-define=API_BASE_URL=http://localhost:8000
 
       - name: Upload coverage
