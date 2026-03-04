@@ -34,34 +34,32 @@ Map<String, dynamic> _$LoginRequestToJson(LoginRequest instance) =>
 
 RegisterRequest _$RegisterRequestFromJson(Map<String, dynamic> json) =>
     RegisterRequest(
+      firstName: json['firstName'] as String,
+      lastName: json['lastName'] as String,
       email: json['email'] as String,
       password: json['password'] as String,
-      firstName: json['first_name'] as String,
-      lastName: json['last_name'] as String,
       role: json['role'] as String,
-      phone: json['phone'] as String?,
     );
 
 Map<String, dynamic> _$RegisterRequestToJson(RegisterRequest instance) =>
     <String, dynamic>{
+      'firstName': instance.firstName,
+      'lastName': instance.lastName,
       'email': instance.email,
       'password': instance.password,
-      'first_name': instance.firstName,
-      'last_name': instance.lastName,
       'role': instance.role,
-      'phone': instance.phone,
     };
 
 RegisterResponse _$RegisterResponseFromJson(Map<String, dynamic> json) =>
     RegisterResponse(
       message: json['message'] as String,
-      userId: json['user_id'] as String,
+      userId: json['userId'] as String,
     );
 
 Map<String, dynamic> _$RegisterResponseToJson(RegisterResponse instance) =>
     <String, dynamic>{
       'message': instance.message,
-      'user_id': instance.userId,
+      'userId': instance.userId,
     };
 
 ForgotPasswordRequest _$ForgotPasswordRequestFromJson(
@@ -83,5 +81,4 @@ ApiError _$ApiErrorFromJson(Map<String, dynamic> json) => ApiError(
 
 Map<String, dynamic> _$ApiErrorToJson(ApiError instance) => <String, dynamic>{
       'error': instance.error,
-      'message': instance.message,
     };

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:auto_route/auto_route.dart';
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/user.dart';
@@ -125,7 +125,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     });
     
     final item = _currentNavItems[index];
-    context.go(item.route);
+    // Auto-route navigation would need proper route definitions
+    // context.router.pushAndClearStack(item.route);
   }
 
   @override

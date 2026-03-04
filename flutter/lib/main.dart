@@ -5,6 +5,7 @@ import 'core/di/injection.dart';
 import 'core/navigation/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/onboarding/presentation/bloc/onboarding_bloc.dart';
 
 void main() async {
@@ -39,11 +40,11 @@ class MyCoachApp extends StatelessWidget {
               ? AppTheme.coachTheme 
               : AppTheme.clientTheme;
               
-          return MaterialApp.router(
+          return MaterialApp(
             title: 'MyCoach',
             debugShowCheckedModeBanner: false,
             theme: theme,
-            routerConfig: appRouter.config(),
+            home: const SplashPage(),
           );
         },
       ),

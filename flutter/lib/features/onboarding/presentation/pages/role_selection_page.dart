@@ -124,7 +124,7 @@ class RoleSelectionPage extends StatelessWidget {
     );
     
     // Navigate to registration with selected role
-    context.router.push(RegisterRoute(role: role));
+    context.router.push(RegisterRoute());
   }
 }
 

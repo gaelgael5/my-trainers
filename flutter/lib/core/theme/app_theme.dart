@@ -270,8 +270,8 @@ class AppTheme {
     );
   }
 
-  static CardTheme _buildCardTheme() {
-    return CardTheme(
+  static CardThemeData _buildCardTheme() {
+    return CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
