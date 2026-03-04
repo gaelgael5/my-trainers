@@ -110,7 +110,7 @@ class _ClientsListPageState extends State<ClientsListPage> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _filters.length,
-              separatorBuilder: (context, index) => const SizedBox(width: AppDimensions.sm),
+              separatorBuilder: (context, index) => SizedBox(width: AppDimensions.sm),
               itemBuilder: (context, index) {
                 final filter = _filters[index];
                 final isSelected = filter == _selectedFilter;
@@ -131,7 +131,7 @@ class _ClientsListPageState extends State<ClientsListPage> {
                     color: isSelected ? AppColors.onPrimary : AppColors.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
-                  shape: const StadiumBorder(),
+                  shape: StadiumBorder(),
                 );
               },
             ),
@@ -140,7 +140,7 @@ class _ClientsListPageState extends State<ClientsListPage> {
           // Clients List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator())
                 : _buildClientsList(),
           ),
         ],
@@ -151,8 +151,8 @@ class _ClientsListPageState extends State<ClientsListPage> {
         },
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.onPrimary,
-        icon: const Icon(Icons.person_add),
-        label: const Text(AppStrings.add),
+        icon: Icon(Icons.person_add),
+        label: Text(AppStrings.add),
       ),
     );
   }
@@ -160,7 +160,7 @@ class _ClientsListPageState extends State<ClientsListPage> {
   Widget _buildClientsList() {
     // Mock clients data
     final clients = [
-      _ClientData(
+      const _ClientData(
         name: 'Marie Dupont',
         email: 'marie.dupont@email.com',
         program: 'Force & Cardio',
@@ -168,7 +168,7 @@ class _ClientsListPageState extends State<ClientsListPage> {
         status: 'Actif',
         initials: 'MD',
       ),
-      _ClientData(
+      const _ClientData(
         name: 'Paul Martin',
         email: 'paul.martin@email.com',
         program: 'Musculation',
@@ -176,7 +176,7 @@ class _ClientsListPageState extends State<ClientsListPage> {
         status: 'Actif',
         initials: 'PM',
       ),
-      _ClientData(
+      const _ClientData(
         name: 'Julie Leclerc',
         email: 'julie.leclerc@email.com',
         program: 'Fitness',
@@ -225,14 +225,14 @@ class _ClientsListPageState extends State<ClientsListPage> {
                 color: AppColors.outline,
               ),
             ),
-            const SizedBox(height: AppDimensions.xl),
+            SizedBox(height: AppDimensions.xl),
             Text(
               AppStrings.noClients,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: AppDimensions.sm),
+            SizedBox(height: AppDimensions.sm),
             Text(
               AppStrings.noClientsDescription,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -240,13 +240,13 @@ class _ClientsListPageState extends State<ClientsListPage> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppDimensions.xl),
+            SizedBox(height: AppDimensions.xl),
             FilledButton.icon(
               onPressed: () {
                 // TODO: Show add client dialog
               },
-              icon: const Icon(Icons.person_add),
-              label: const Text(AppStrings.addClient),
+              icon: Icon(Icons.person_add),
+              label: Text(AppStrings.addClient),
             ),
           ],
         ),
@@ -259,7 +259,8 @@ class _ClientCard extends StatelessWidget {
   final _ClientData client;
   final VoidCallback onTap;
 
-  const _ClientCard({
+  _ClientCard({
+    super.key,
     required this.client,
     required this.onTap,
   });
@@ -289,7 +290,7 @@ class _ClientCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: AppDimensions.md),
+                SizedBox(width: AppDimensions.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,7 +329,7 @@ class _ClientCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: AppDimensions.xs),
+                      SizedBox(height: AppDimensions.xs),
                       Text(
                         'Programme: ${client.program}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -337,12 +338,12 @@ class _ClientCard extends StatelessWidget {
                       ),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.access_time,
                             size: 14,
                             color: AppColors.textDisabled,
                           ),
-                          const SizedBox(width: AppDimensions.xs),
+                          SizedBox(width: AppDimensions.xs),
                           Text(
                             'Dernière séance: ${client.lastSession}',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -354,7 +355,7 @@ class _ClientCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(
+                Icon(
                   Icons.chevron_right,
                   size: AppDimensions.iconBase,
                   color: AppColors.outline,
@@ -376,7 +377,7 @@ class _ClientData {
   final String status;
   final String initials;
 
-  _ClientData({
+  const _ClientData({
     required this.name,
     required this.email,
     required this.program,
