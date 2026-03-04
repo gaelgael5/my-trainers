@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: docker.io  # ← Docker Hub !
-  IMAGE_NAME: ${{ secrets.DOCKER_USER }}/mycoach-backend
+  IMAGE_NAME: ${{ secrets.DOCKER_USER }}/trainers-backend
 
 jobs:
   build-and-push:
