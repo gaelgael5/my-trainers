@@ -1,0 +1,100 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ dev, main ]
+  pull_request:
+    branches: [ dev, main ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio
+    
+    - name: Run tests
+      run: |
+        cd backend
+        pytest tests/ -v
+    
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        cd backend
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+  test-flutter:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.0'
+    
+    - name: Install dependencies
+      run: |
+        cd flutter
+        flutter pub get
+    
+    - name: Analyze code
+      run: |
+        cd flutter
+        flutter analyze
+    
+    - name: Run tests
+      run: |
+        cd flutter
+        flutter test
+
+  build-and-deploy:
+    needs: [test-backend, test-flutter]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Docker images
+      run: |
+        docker build -t mytrainer-backend:${{ github.sha }} ./backend
+        
+    - name: Build Flutter web
+      run: |
+        cd flutter
+        flutter build web --release
+    
+    - name: Deploy to staging
+      run: |
+        echo "🚀 Deploying to staging environment"
+        # Ici: commandes de déploiement
+        
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
