@@ -50,7 +50,8 @@ class _LoginPageState extends State<LoginPage> {
               ),
             );
           } else if (state.isAuthenticated) {
-            context.router.pushAndClearStack(const HomeRoute());
+            context.router.popUntil((route) => false);
+            context.router.push(const HomeRoute());
           }
         },
         child: SingleChildScrollView(
@@ -181,9 +182,10 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => context.router.pushAndClearStack(
-                        const RoleSelectionRoute(),
-                      ),
+                      onTap: () {
+                        context.router.popUntil((route) => false);
+                        context.router.push(const RoleSelectionRoute());
+                      },
                       child: const Text(
                         'S\'inscrire',
                         style: TextStyle(
