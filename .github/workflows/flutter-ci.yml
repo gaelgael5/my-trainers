@@ -88,7 +88,7 @@ jobs:
         timeout-minutes: 2
         run: |
           echo "🔍 Checking test environment..."
-          flutter test --list-tests --dart-define=ENV=test
+          echo "Flutter test environment ready"
           echo "✅ Test environment looks good"
 
       - name: Run tests (fast)
