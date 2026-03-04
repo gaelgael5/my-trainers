@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import '../config/app_config.dart';
 import '../storage/secure_storage.dart';
@@ -33,22 +34,22 @@ class ApiClient {
         }
         
         // Log request in debug mode
-        print('🚀 ${options.method} ${options.uri}');
+        debugPrint('🚀 ${options.method} ${options.uri}');
         if (options.data != null) {
-          print('📤 Request Body: ${options.data}');
+          debugPrint('📤 Request Body: ${options.data}');
         }
         
         handler.next(options);
       },
       
       onResponse: (response, handler) {
-        print('✅ ${response.statusCode} ${response.requestOptions.uri}');
+        debugPrint('✅ ${response.statusCode} ${response.requestOptions.uri}');
         handler.next(response);
       },
       
       onError: (error, handler) async {
-        print('❌ ${error.response?.statusCode} ${error.requestOptions.uri}');
-        print('Error: ${error.message}');
+        debugPrint('❌ ${error.response?.statusCode} ${error.requestOptions.uri}');
+        debugPrint('Error: ${error.message}');
         
         // Handle token refresh for 401 errors
         if (error.response?.statusCode == 401) {
@@ -96,7 +97,7 @@ class ApiClient {
         return true;
       }
     } catch (e) {
-      print('Token refresh failed: $e');
+      debugPrint('Token refresh failed: $e');
     }
     return false;
   }

@@ -63,7 +63,7 @@ class RoleSelectionPage extends StatelessWidget {
                       title: 'Je suis Coach',
                       subtitle: 'Je propose mes services de coaching sportif',
                       icon: Icons.fitness_center,
-                      gradientColors: [
+                      gradientColors: const [
                         AppColors.coachSecondary,
                         AppColors.coachAccent,
                       ],
@@ -77,7 +77,7 @@ class RoleSelectionPage extends StatelessWidget {
                       title: 'Je cherche un Coach',
                       subtitle: 'Je souhaite trouver un coach sportif',
                       icon: Icons.directions_run,
-                      gradientColors: [
+                      gradientColors: const [
                         AppColors.clientSecondary,
                         AppColors.clientAccent,
                       ],

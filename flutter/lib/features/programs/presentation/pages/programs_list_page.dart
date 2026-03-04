@@ -175,7 +175,7 @@ class _ProgramCard extends StatelessWidget {
               const SizedBox(height: AppDimensions.sm),
               Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.person_outlined,
                     size: 16,
                     color: AppColors.textDisabled,
@@ -188,7 +188,7 @@ class _ProgramCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: AppDimensions.base),
-                  Icon(
+                  const Icon(
                     Icons.fitness_center,
                     size: 16,
                     color: AppColors.textDisabled,

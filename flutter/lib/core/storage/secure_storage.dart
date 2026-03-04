@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
@@ -73,7 +74,7 @@ class SecureStorage {
       final json = jsonDecode(userData) as Map<String, dynamic>;
       return User.fromJson(json);
     } catch (e) {
-      print('Error parsing user data: $e');
+      debugPrint('Error parsing user data: $e');
       return null;
     }
   }

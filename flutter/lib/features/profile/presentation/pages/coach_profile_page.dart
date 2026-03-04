@@ -316,9 +316,9 @@ class _CoachProfilePageState extends State<CoachProfilePage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(
+              child: const Text(
                 'Annuler',
-                style: TextStyle(color: AppColors.textSecondary),
+                style: const TextStyle(color: AppColors.textSecondary),
               ),
             ),
             FilledButton(

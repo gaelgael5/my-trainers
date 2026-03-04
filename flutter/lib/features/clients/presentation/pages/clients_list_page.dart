@@ -13,7 +13,7 @@ class ClientsListPage extends StatefulWidget {
 class _ClientsListPageState extends State<ClientsListPage> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedFilter = 'Tous';
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   final List<String> _filters = ['Tous', 'Actifs', 'Inactifs', 'Récents'];
 
@@ -212,14 +212,14 @@ class _ClientsListPageState extends State<ClientsListPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
+            const Container(
               width: 120,
               height: 120,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.surfaceVariant,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.people_outline,
                 size: AppDimensions.iconXxl,
                 color: AppColors.outline,
@@ -246,7 +246,7 @@ class _ClientsListPageState extends State<ClientsListPage> {
                 // TODO: Show add client dialog
               },
               icon: const Icon(Icons.person_add),
-              label: Text(AppStrings.addClient),
+              label: const Text(AppStrings.addClient),
             ),
           ],
         ),

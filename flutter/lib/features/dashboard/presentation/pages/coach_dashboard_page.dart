@@ -221,22 +221,22 @@ class _StatsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: [
-        _StatCard(
+      children: const [
+        const _StatCard(
           icon: Icons.people,
           iconColor: AppColors.primary,
           value: '12',
           label: AppStrings.clients,
         ),
         const SizedBox(width: AppDimensions.md),
-        _StatCard(
+        const _StatCard(
           icon: Icons.fitness_center,
           iconColor: AppColors.success,
           value: '8',
           label: AppStrings.programs,
         ),
         const SizedBox(width: AppDimensions.md),
-        _StatCard(
+        const _StatCard(
           icon: Icons.chat_bubble,
           iconColor: AppColors.warning,
           value: '3',

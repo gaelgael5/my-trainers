@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(MyCoachApp());
+  runApp(const MyCoachApp());
 }
 
 class MyCoachApp extends StatelessWidget {
+  const MyCoachApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -14,12 +16,14 @@ class MyCoachApp extends StatelessWidget {
         primarySwatch: Colors.purple,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: HomePage(),
+      home: const HomePage(),
     );
   }
 }
 
 class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
