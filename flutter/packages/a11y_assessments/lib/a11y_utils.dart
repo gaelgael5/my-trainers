@@ -8,7 +8,7 @@ class A11yUtils {
     final report = AssessmentReport();
     
     // Placeholder implementation
-    print('Performing accessibility assessment...');
+    debugPrint('Performing accessibility assessment...');
     
     return report;
   }
