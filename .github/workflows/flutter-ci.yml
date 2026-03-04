@@ -38,7 +38,11 @@ jobs:
           else
             echo "ENV=dev" >> $GITHUB_OUTPUT
           fi
-          echo "API_URL=http://192.168.10.63:8200" >> $GITHUB_OUTPUT
+          if [[ "$BRANCH" == "uat" ]]; then
+            echo "API_URL=https://api-uat.my-trainers.app" >> $GITHUB_OUTPUT
+          else
+            echo "API_URL=https://api-dev.my-trainers.app" >> $GITHUB_OUTPUT
+          fi
 
       - uses: actions/setup-java@v4
         with:
@@ -75,15 +79,46 @@ jobs:
       - name: Build APK
         working-directory: flutter
         run: |
+          echo "🔧 Configuration du build..."
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Environment: ${{ steps.env.outputs.ENV }}"
+          echo "API URL: ${{ steps.env.outputs.API_URL }}"
+          
           sed -i "s/version: 1.0.0+.*/version: 1.0.0+${{ github.run_number }}/" pubspec.yaml
+          echo "Version mise à jour: $(grep version pubspec.yaml)"
+          
           if [[ "${{ github.ref_name }}" == "uat" ]]; then
+            echo "🚀 Building RELEASE APK..."
             flutter build apk --release \
               --dart-define=ENV=${{ steps.env.outputs.ENV }} \
-              --dart-define=API_BASE_URL=${{ steps.env.outputs.API_URL }}
+              --dart-define=API_BASE_URL=${{ steps.env.outputs.API_URL }} \
+              --verbose
           else
+            echo "🔧 Building DEBUG APK..."
             flutter build apk --debug \
               --dart-define=ENV=${{ steps.env.outputs.ENV }} \
-              --dart-define=API_BASE_URL=${{ steps.env.outputs.API_URL }}
+              --dart-define=API_BASE_URL=${{ steps.env.outputs.API_URL }} \
+              --verbose
+          fi
+          
+          echo "📦 Vérification du build..."
+          ls -la build/app/outputs/flutter-apk/
+          
+          # Vérifier que l'APK existe
+          if [[ "${{ github.ref_name }}" == "uat" ]]; then
+            APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
+          else
+            APK_PATH="build/app/outputs/flutter-apk/app-debug.apk"
+          fi
+          
+          if [[ -f "$APK_PATH" ]]; then
+            APK_SIZE=$(stat -c%s "$APK_PATH" | numfmt --to=iec)
+            echo "✅ APK créé avec succès: $APK_PATH ($APK_SIZE)"
+          else
+            echo "❌ APK non trouvé: $APK_PATH"
+            echo "Contenu du dossier build:"
+            find build -name "*.apk" -type f
+            exit 1
           fi
 
       # ─── Firebase App Distribution (dev builds → testers) ─────────────
