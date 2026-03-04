@@ -66,10 +66,10 @@ class _SplashPageState extends State<SplashPage>
     
     if (authState.isAuthenticated) {
       // User is authenticated, navigate to appropriate dashboard
-      context.router.pushAndClearStack(const HomeRoute());
+      context.router.replace(const HomeRoute());
     } else {
       // User is not authenticated, go to role selection
-      context.router.pushAndClearStack(const RoleSelectionRoute());
+      context.router.replace(const RoleSelectionRoute());
     }
   }
 

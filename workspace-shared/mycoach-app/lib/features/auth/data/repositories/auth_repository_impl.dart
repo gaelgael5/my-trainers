@@ -113,7 +113,7 @@ class AuthRepositoryImpl implements AuthRepository {
     } catch (e) {
       // If refresh fails, clear local data
       await logout();
-      throw e;
+      rethrow;
     }
   }
 }

@@ -73,7 +73,7 @@ class SecureStorage {
       final json = jsonDecode(userData) as Map<String, dynamic>;
       return User.fromJson(json);
     } catch (e) {
-      print('Error parsing user data: $e');
+      // print('Error parsing user data: $e');
       return null;
     }
   }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+// import 'package:auto_route/auto_route.dart';
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/user.dart';
@@ -124,8 +124,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       _currentIndex = index;
     });
     
-    final item = _currentNavItems[index];
-    context.go(item.route);
+    // Note: Using index-based navigation instead of routes for now
+    // TODO: Implement proper auto_route navigation when routes are configured
   }
 
   @override

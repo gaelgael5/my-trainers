@@ -229,7 +229,7 @@ class HomePage extends StatelessWidget {
             onPressed: () {
               Navigator.of(context).pop();
               context.read<AuthBloc>().add(const AuthLogoutRequested());
-              context.router.pushAndClearStack(const RoleSelectionRoute());
+              context.router.replace(const RoleSelectionRoute());
             },
             child: const Text(
               'Déconnecter',

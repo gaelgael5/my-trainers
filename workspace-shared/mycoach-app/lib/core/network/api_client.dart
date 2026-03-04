@@ -33,22 +33,22 @@ class ApiClient {
         }
         
         // Log request in debug mode
-        print('🚀 ${options.method} ${options.uri}');
-        if (options.data != null) {
-          print('📤 Request Body: ${options.data}');
-        }
+        // print('🚀 ${options.method} ${options.uri}');
+        // if (options.data != null) {
+        //   print('📤 Request Body: ${options.data}');
+        // }
         
         handler.next(options);
       },
       
       onResponse: (response, handler) {
-        print('✅ ${response.statusCode} ${response.requestOptions.uri}');
+        // print('✅ ${response.statusCode} ${response.requestOptions.uri}');
         handler.next(response);
       },
       
       onError: (error, handler) async {
-        print('❌ ${error.response?.statusCode} ${error.requestOptions.uri}');
-        print('Error: ${error.message}');
+        // print('❌ ${error.response?.statusCode} ${error.requestOptions.uri}');
+        // print('Error: ${error.message}');
         
         // Handle token refresh for 401 errors
         if (error.response?.statusCode == 401) {
@@ -96,7 +96,7 @@ class ApiClient {
         return true;
       }
     } catch (e) {
-      print('Token refresh failed: $e');
+      // print('Token refresh failed: $e');
     }
     return false;
   }

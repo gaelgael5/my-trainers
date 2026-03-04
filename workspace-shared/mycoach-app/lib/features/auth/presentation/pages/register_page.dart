@@ -87,7 +87,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 backgroundColor: AppColors.success,
               ),
             );
-            context.router.pushAndClearStack(const LoginRoute());
+            context.router.replace(const LoginRoute());
           }
         },
         child: SingleChildScrollView(

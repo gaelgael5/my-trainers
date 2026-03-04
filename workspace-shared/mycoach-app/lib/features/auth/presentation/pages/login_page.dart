@@ -50,7 +50,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
             );
           } else if (state.isAuthenticated) {
-            context.router.pushAndClearStack(const HomeRoute());
+            context.router.replace(const HomeRoute());
           }
         },
         child: SingleChildScrollView(
@@ -181,7 +181,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => context.router.pushAndClearStack(
+                      onTap: () => context.router.replace(
                         const RoleSelectionRoute(),
                       ),
                       child: const Text(
