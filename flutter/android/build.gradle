@@ -2,6 +2,9 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        jcenter() // Fallback for legacy artifacts
+        maven { url 'https://jitpack.io' } // For GitHub-hosted dependencies
+        gradlePluginPortal()
     }
 }
 
