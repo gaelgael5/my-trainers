@@ -11,7 +11,7 @@ on:
       - 'flutter/**'
 
 env:
-  FLUTTER_VERSION: '3.41.3'
+  FLUTTER_VERSION: '3.24.5'
   JAVA_VERSION: '17'
 
 concurrency:
@@ -54,21 +54,29 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
           cache: true
-          cache-key: flutter-cache-${{ runner.os }}-${{ hashFiles('**/pubspec.lock') }}
+          cache-key: flutter-${{ env.FLUTTER_VERSION }}-${{ runner.os }}-${{ hashFiles('**/pubspec.lock') }}
+          cache-path: ${{ runner.tool_cache }}/flutter
 
       - name: Debug Environment
         run: |
+          echo "🔍 Environment verification..."
           flutter --version
-          flutter doctor -v
+          dart --version
           echo "Available space: $(df -h /)"
+          echo "Java version: $(java -version 2>&1 | head -1)"
+          flutter doctor -v
 
       - name: Install dependencies
         working-directory: flutter
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
+          echo "🧹 Cleaning workspace..."
           flutter clean
+          echo "🔧 Repairing pub cache..."
           flutter pub cache repair
+          echo "📦 Installing dependencies..."
           flutter pub get --verbose
+          echo "✅ Dependencies installed successfully"
 
       - name: Analyze
         working-directory: flutter
