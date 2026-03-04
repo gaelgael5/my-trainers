@@ -130,9 +130,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
-    
     // Auto-switch theme based on role if dynamic theme is enabled
     final shouldUseDarkTheme = widget.role == UserRole.coach;
     final navBarColor = shouldUseDarkTheme 
