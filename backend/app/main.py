@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(
     title="MyCoach API",
     description="API pour l'application de coaching sportif MyCoach",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 app.add_middleware(
@@ -15,14 +15,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 async def root():
     return {"message": "MyCoach API v1.0.0"}
+
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
