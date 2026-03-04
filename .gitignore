@@ -7,6 +7,13 @@
 .buildlog/
 .history
 
+# Archives volumineuses
+*.tar.xz
+*.rar.xz
+*.tar.gz
+*.rar
+*.zip
+
 
 
 # Flutter repo-specific
