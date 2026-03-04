@@ -212,7 +212,7 @@ class _ClientsListPageState extends State<ClientsListPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Container(
+            Container(
               width: 120,
               height: 120,
               decoration: const BoxDecoration(

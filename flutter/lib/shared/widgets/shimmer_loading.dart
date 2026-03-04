@@ -151,12 +151,12 @@ class ShimmerListTile extends StatelessWidget {
             const SizedBox(width: AppDimensions.md),
           ],
           const Expanded(
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                const ShimmerText(width: 150, height: 18),
-                const SizedBox(height: AppDimensions.xs),
-                const ShimmerText(
+              children: [
+                ShimmerText(width: 150, height: 18),
+                SizedBox(height: AppDimensions.xs),
+                ShimmerText(
                   width: 100,
                   height: 14,
                 ),
