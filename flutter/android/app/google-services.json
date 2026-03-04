@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "320022309385",
+    "project_id": "my-trainers-224df",
+    "storage_bucket": "my-trainers-224df.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:320022309385:android:bc7af5200bebdd4b13e6d8",
+        "android_client_info": {
+          "package_name": "com.mycoach.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRFNNGLVcTwErrgY7EBgzsHP0IBgzwC5Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
