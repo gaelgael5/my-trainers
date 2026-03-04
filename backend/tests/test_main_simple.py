@@ -1,6 +1,7 @@
+"""Tests simples sans dépendance DB pour validation CI/CD"""
+
 import os
 
-import pytest
 from fastapi.testclient import TestClient
 
 # On définit une variable d'environnement pour indiquer qu'on est en test
@@ -44,3 +45,10 @@ def test_redoc_endpoint():
     # Should return HTML content for ReDoc UI
     assert response.status_code == 200
     assert "text/html" in response.headers.get("content-type", "")
+
+
+def test_app_creation():
+    """Test que l'application FastAPI se lance correctement"""
+    assert app.title == "MyCoach API"
+    assert app.version == "1.0.0"
+    assert "MyCoach - Phase 1" in app.description

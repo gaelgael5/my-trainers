@@ -14,6 +14,7 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
 jobs:
   test:
@@ -23,9 +24,9 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_PASSWORD: test
-          POSTGRES_USER: test
-          POSTGRES_DB: test
+          POSTGRES_PASSWORD: mycoach_test
+          POSTGRES_USER: mycoach
+          POSTGRES_DB: mycoach_test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -58,11 +59,18 @@ jobs:
           black --check .
           isort --check-only .
 
-      - name: Run tests
+      - name: Run basic tests (no DB dependency)
         working-directory: backend
-        run: pytest tests/ -v --cov=app --cov-report=xml
+        run: pytest tests/test_main_simple.py -v --cov=app --cov-report=xml
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          TESTING: "1"
+
+      - name: Run full tests with DB
+        working-directory: backend
+        run: pytest tests/ -v --cov=app --cov-report=xml --cov-append
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TESTING: "1"
 
   security:
     runs-on: ubuntu-latest
