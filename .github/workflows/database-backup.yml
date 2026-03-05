@@ -1,6 +1,7 @@
+---
 name: 🗄️ Database Backup & Management
 
-on:
+"on":
   schedule:
     # Backup quotidien à 2h du matin UTC
     - cron: '0 2 * * *'
@@ -14,17 +15,17 @@ on:
         default: 'full'
         type: choice
         options:
-        - full
-        - schema-only
-        - data-only
+          - full
+          - schema-only
+          - data-only
       environment:
         description: 'Environnement'
         required: true
         default: 'production'
         type: choice
         options:
-        - production
-        - staging
+          - production
+          - staging
       force_test:
         description: 'Forcer le test de restauration'
         required: false
@@ -40,7 +41,7 @@ jobs:
     name: 🗄️ PostgreSQL Backup
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'production' }}
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -50,7 +51,7 @@ jobs:
           set -e
           sudo apt-get update
           sudo apt-get install -y postgresql-client-15
-          
+
       - name: Configure AWS CLI
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -65,14 +66,14 @@ jobs:
           set -e
           S3_BUCKET="mycoach-backups-$(echo $ENV | tr '[:upper:]' '[:lower:]')"
           echo "🔧 Validating S3 bucket access: $S3_BUCKET"
-          
+
           # Vérifie l'existence et l'accès au bucket
           if ! aws s3api head-bucket --bucket "$S3_BUCKET" 2>/dev/null; then
             echo "❌ Cannot access S3 bucket: $S3_BUCKET"
-            echo "Please ensure the bucket exists and AWS credentials have proper permissions"
+            echo "Please ensure the bucket exists and proper permissions"
             exit 1
           fi
-          
+
           echo "✅ S3 bucket access validated"
           echo "S3_BUCKET=$S3_BUCKET" >> $GITHUB_ENV
 
@@ -85,54 +86,57 @@ jobs:
           set -e
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
           BACKUP_FILE="mycoach_${ENV}_${BACKUP_TYPE}_${TIMESTAMP}.sql"
-          
+
           echo "🔧 Creating ${BACKUP_TYPE} backup..."
-          
+
           # Validation de la DATABASE_URL
           if [ -z "$DATABASE_URL" ]; then
             echo "❌ DATABASE_URL is not set"
             exit 1
           fi
-          
+
           case $BACKUP_TYPE in
             "schema-only")
-              pg_dump --schema-only --no-owner --no-privileges "$DATABASE_URL" > "$BACKUP_FILE"
+              pg_dump --schema-only --no-owner --no-privileges \
+                "$DATABASE_URL" > "$BACKUP_FILE"
               ;;
             "data-only")
-              pg_dump --data-only --no-owner --no-privileges "$DATABASE_URL" > "$BACKUP_FILE"
+              pg_dump --data-only --no-owner --no-privileges \
+                "$DATABASE_URL" > "$BACKUP_FILE"
               ;;
             *)
-              pg_dump --no-owner --no-privileges "$DATABASE_URL" > "$BACKUP_FILE"
+              pg_dump --no-owner --no-privileges \
+                "$DATABASE_URL" > "$BACKUP_FILE"
               ;;
           esac
-          
+
           # Vérification que le backup a été créé
           if [ ! -f "$BACKUP_FILE" ] || [ ! -s "$BACKUP_FILE" ]; then
             echo "❌ Backup file was not created or is empty"
             exit 1
           fi
-          
+
           echo "📊 Backup file size: $(du -h $BACKUP_FILE | cut -f1)"
-          
+
           # Compression
           echo "🗜️ Compressing backup..."
           gzip "$BACKUP_FILE"
           BACKUP_FILE="${BACKUP_FILE}.gz"
           echo "📊 Compressed size: $(du -h $BACKUP_FILE | cut -f1)"
-          
+
           # Upload vers S3
           echo "☁️ Uploading to S3..."
           BACKUP_PATH="backups/$(date +%Y)/$(date +%m)/$BACKUP_FILE"
           aws s3 cp "$BACKUP_FILE" "s3://${S3_BUCKET}/$BACKUP_PATH"
-          
+
           # Validation de l'upload
-          if aws s3 ls "s3://${S3_BUCKET}/$BACKUP_PATH" > /dev/null 2>&1; then
+          if aws s3 ls "s3://${S3_BUCKET}/$BACKUP_PATH" >/dev/null 2>&1; then
             echo "✅ Backup uploaded successfully to S3"
           else
             echo "❌ Backup upload failed"
             exit 1
           fi
-          
+
           # Export pour les steps suivants
           echo "BACKUP_FILE=$BACKUP_FILE" >> $GITHUB_ENV
           echo "BACKUP_PATH=$BACKUP_PATH" >> $GITHUB_ENV
@@ -140,24 +144,25 @@ jobs:
       - name: 🧹 Cleanup Old Backups
         run: |
           set -e
-          CUTOFF_TIMESTAMP=$(date -d "$BACKUP_RETENTION_DAYS days ago" +%s)
-          
+          CUTOFF_DATE=$(date -d "$BACKUP_RETENTION_DAYS days ago" +"%Y-%m-%d")
           echo "🗑️ Removing backups older than $BACKUP_RETENTION_DAYS days..."
-          
-          # Liste les objets et filtre par date
+          echo "Cutoff date: $CUTOFF_DATE"
+
+          # Liste et supprime les objets anciens avec approche simplifiée
           aws s3api list-objects-v2 \
             --bucket "$S3_BUCKET" \
             --prefix "backups/" \
-            --query "Contents[].{Key: Key, LastModified: LastModified}" \
-            --output json | \
-          jq -r --argjson cutoff "$CUTOFF_TIMESTAMP" \
-            '.[] | select((.LastModified | strptime("%Y-%m-%dT%H:%M:%S.%fZ") | mktime) < $cutoff) | .Key' | \
-          while read -r key; do
-            if [ -n "$key" ]; then
+            --query "Contents[?LastModified<='${CUTOFF_DATE}T23:59:59Z'].Key" \
+            --output text | \
+          while IFS=$'\t' read -r key; do
+            if [ -n "$key" ] && [ "$key" != "None" ]; then
               echo "Deleting: s3://$S3_BUCKET/$key"
-              aws s3 rm "s3://$S3_BUCKET/$key"
+              aws s3 rm "s3://$S3_BUCKET/$key" || \
+                echo "⚠️ Failed to delete $key"
             fi
           done
+
+          echo "✅ Cleanup completed"
 
       - name: 🔍 Backup Verification
         run: |
@@ -170,18 +175,21 @@ jobs:
               echo "❌ Backup file corrupted"
               exit 1
             fi
-            
+
             # Affichage des infos
             BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
             LINES_COUNT=$(zcat "$BACKUP_FILE" | wc -l)
-            
+
             echo "## 📊 Backup Summary" >> $GITHUB_STEP_SUMMARY
             echo "- **File**: $BACKUP_FILE" >> $GITHUB_STEP_SUMMARY
             echo "- **Size**: $BACKUP_SIZE" >> $GITHUB_STEP_SUMMARY
             echo "- **Lines**: $LINES_COUNT" >> $GITHUB_STEP_SUMMARY
-            echo "- **Type**: ${{ github.event.inputs.backup_type || 'full' }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **Environment**: ${{ github.event.inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **S3 Path**: s3://$S3_BUCKET/$BACKUP_PATH" >> $GITHUB_STEP_SUMMARY
+            BACKUP_TYPE="${{ github.event.inputs.backup_type || 'full' }}"
+            echo "- **Type**: $BACKUP_TYPE" >> $GITHUB_STEP_SUMMARY
+            ENV="${{ github.event.inputs.environment || 'production' }}"
+            echo "- **Environment**: $ENV" >> $GITHUB_STEP_SUMMARY
+            echo "- **S3 Path**: s3://$S3_BUCKET/$BACKUP_PATH" \
+              >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: 📢 Notification
@@ -189,12 +197,15 @@ jobs:
         run: |
           # Notification Discord avec fallback gracieux
           if [ -n "${{ secrets.DISCORD_WEBHOOK }}" ]; then
-            curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
+            WEBHOOK_URL="${{ secrets.DISCORD_WEBHOOK }}"
+            ENV="${{ github.event.inputs.environment || 'production' }}"
+            TYPE="${{ github.event.inputs.backup_type || 'full' }}"
+            curl -X POST "$WEBHOOK_URL" \
               -H "Content-Type: application/json" \
               -d '{
                 "embeds": [{
                   "title": "❌ Database Backup Failed",
-                  "description": "Environment: ${{ github.event.inputs.environment || \"production\" }}\nType: ${{ github.event.inputs.backup_type || \"full\" }}",
+                  "description": "Environment: '"$ENV"'\nType: '"$TYPE"'",
                   "color": 15158332,
                   "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
                 }]
@@ -209,19 +220,20 @@ jobs:
   test-backup-restore:
     name: 🔬 Test Backup Restore
     runs-on: ubuntu-latest
-    # Exécuté si c'est un test mensuel (3h le 1er) ou si force_test est true
-    if: |
-      (github.event_name == 'schedule' && github.event.schedule == '0 3 1 * *') ||
+    # CORRECTION: logique de condition pour test mensuel ou forcé
+    if: >
+      (github.event_name == 'schedule' &&
+       contains(github.event.schedule, '0 3 1 * *')) ||
       github.event.inputs.force_test == 'true'
     needs: backup-database
     environment: ${{ github.event.inputs.environment || 'production' }}
-    
+
     services:
       postgres:
         image: postgres:15
         env:
           POSTGRES_PASSWORD: testpass
-          POSTGRES_USER: testuser  
+          POSTGRES_USER: testuser
           POSTGRES_DB: restore_test
         options: >-
           --health-cmd pg_isready
@@ -230,7 +242,7 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-    
+
     steps:
       - name: Setup PostgreSQL Client
         run: |
@@ -251,40 +263,44 @@ jobs:
         run: |
           set -e
           S3_BUCKET="mycoach-backups-$(echo $ENV | tr '[:upper:]' '[:lower:]')"
-          
+
           echo "📁 Searching for latest backup in $S3_BUCKET..."
-          
+
           # Récupère le dernier backup
           LATEST_BACKUP=$(aws s3 ls "s3://$S3_BUCKET/backups/" --recursive | \
             grep "\.sql\.gz$" | sort | tail -1 | awk '{print $4}')
-          
+
           if [ -z "$LATEST_BACKUP" ]; then
             echo "❌ No backup found in S3 bucket"
             exit 1
           fi
-          
+
           echo "📁 Testing restore of: $LATEST_BACKUP"
-          
+
           # Télécharge et restaure
           aws s3 cp "s3://$S3_BUCKET/$LATEST_BACKUP" ./test_backup.sql.gz
-          
+
           # Vérification de l'intégrité avant décompression
           if ! gzip -t ./test_backup.sql.gz; then
             echo "❌ Downloaded backup file is corrupted"
             exit 1
           fi
-          
+
           gunzip test_backup.sql.gz
-          
+
           # Test de restauration
           echo "🔄 Restoring backup to test database..."
-          PGPASSWORD=testpass psql -h localhost -U testuser -d restore_test -f test_backup.sql
-          
-          # Vérification basique
-          TABLE_COUNT=$(PGPASSWORD=testpass psql -h localhost -U testuser -d restore_test -t -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';" | xargs)
-          
+          PGPASSWORD=testpass psql -h localhost -U testuser -d restore_test \
+            -f test_backup.sql
+
+          # Vérification basique avec export correct vers $GITHUB_ENV
+          TABLE_COUNT=$(PGPASSWORD=testpass psql -h localhost -U testuser \
+            -d restore_test -t \
+            -c "SELECT count(*) FROM information_schema.tables WHERE" \
+            "table_schema = 'public';" | xargs)
+
           if [ "$TABLE_COUNT" -gt 0 ]; then
-            echo "✅ Backup restore test successful ($TABLE_COUNT tables restored)"
+            echo "✅ Backup restore test successful ($TABLE_COUNT tables)"
             echo "TABLE_COUNT=$TABLE_COUNT" >> $GITHUB_ENV
           else
             echo "❌ Backup restore test failed (no tables found)"
@@ -294,21 +310,24 @@ jobs:
       - name: 📊 Restore Test Summary
         run: |
           echo "## 🧪 Backup Restore Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ✅ Passed" >> $GITHUB_STEP_SUMMARY  
+          echo "- **Status**: ✅ Passed" >> $GITHUB_STEP_SUMMARY
           echo "- **Tables Restored**: $TABLE_COUNT" >> $GITHUB_STEP_SUMMARY
           echo "- **Test Date**: $(date)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment**: ${{ github.event.inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
+          ENV="${{ github.event.inputs.environment || 'production' }}"
+          echo "- **Environment**: $ENV" >> $GITHUB_STEP_SUMMARY
 
       - name: 📢 Test Success Notification
         if: success()
         run: |
           if [ -n "${{ secrets.DISCORD_WEBHOOK }}" ]; then
-            curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
+            WEBHOOK_URL="${{ secrets.DISCORD_WEBHOOK }}"
+            ENV="${{ github.event.inputs.environment || 'production' }}"
+            curl -X POST "$WEBHOOK_URL" \
               -H "Content-Type: application/json" \
               -d '{
                 "embeds": [{
                   "title": "✅ Backup Restore Test Successful",
-                  "description": "Environment: ${{ github.event.inputs.environment || \"production\" }}\nTables restored: '$TABLE_COUNT'",
+                  "description": "Environment: '"$ENV"'\nTables restored: '"$TABLE_COUNT"'",
                   "color": 5763719,
                   "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
                 }]
