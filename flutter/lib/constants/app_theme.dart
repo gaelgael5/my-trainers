@@ -31,12 +31,10 @@ class AppTheme {
         primary: AppColors.primaryOrange,
         secondary: AppColors.primaryOrange,
         surface: AppColors.darkBackground,
-        background: AppColors.darkBackground,
         error: AppColors.error,
         onPrimary: AppColors.white,
         onSecondary: AppColors.white,
         onSurface: AppColors.white,
-        onBackground: AppColors.white,
         onError: AppColors.white,
       ),
       
