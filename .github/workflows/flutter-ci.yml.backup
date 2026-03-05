@@ -165,7 +165,7 @@ jobs:
       # ─── Firebase App Distribution (dev builds → testers) ─────────────
       - name: Upload to Firebase App Distribution
         if: github.ref_name == 'dev'
-        uses: wzieba/Firebase-Distribution-Github-Action@v1.7.0
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: "1:320022309385:android:838aa805fc59ee1d13e6d8"
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -176,7 +176,7 @@ jobs:
       # ─── Firebase App Distribution (uat builds → testers) ──────────────
       - name: Upload UAT to Firebase
         if: github.ref_name == 'uat'
-        uses: wzieba/Firebase-Distribution-Github-Action@v1.7.0
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: "1:320022309385:android:838aa805fc59ee1d13e6d8"
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
