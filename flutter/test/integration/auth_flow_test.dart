@@ -8,9 +8,11 @@ import 'package:mycoach/services/storage_service.dart';
 import 'package:mycoach/services/api_service.dart';
 import 'package:mycoach/services/auth_service.dart';
 import 'package:mycoach/providers/auth_provider.dart';
+import '../test_helper.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  initializeTestEnvironment();
 
   group('Authentication Flow Integration Tests', () {
     late StorageService storageService;

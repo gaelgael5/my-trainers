@@ -101,15 +101,23 @@ jobs:
 
       - name: Run tests (fast)
         working-directory: flutter
-        timeout-minutes: 5
+        timeout-minutes: 8
         run: |
           echo "🧪 Running Flutter tests (without coverage)..."
           echo "📋 Available test files:"
-          find test -name "*.dart" | grep -v ".mocks.dart"
+          find test -name "*.dart" ! -name "*.mocks.dart" ! -name "test_helper.dart"
           echo "🔧 Running pub get again to ensure test dependencies..."
           flutter pub get
+          echo "🔨 Ensuring mocks are up to date..."
+          dart run build_runner build --delete-conflicting-outputs || echo "⚠️ Mock generation failed, continuing..."
           echo "🧪 Starting tests with verbose output..."
-          flutter test --dart-define=ENV=test --dart-define=API_BASE_URL=http://localhost:8000 --timeout=30s --concurrency=1 --verbose
+          flutter test \
+            --dart-define=ENV=test \
+            --dart-define=API_BASE_URL=http://localhost:8000 \
+            --timeout=30s \
+            --concurrency=1 \
+            --verbose \
+            --reporter=expanded
           echo "✅ Tests completed successfully"
 
       - name: Run tests with coverage
