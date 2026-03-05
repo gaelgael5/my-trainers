@@ -79,6 +79,14 @@ jobs:
           flutter pub get --verbose
           echo "✅ Dependencies installed successfully"
 
+      - name: Generate mocks
+        working-directory: flutter
+        timeout-minutes: 5
+        run: |
+          echo "🔨 Generating test mocks..."
+          dart run build_runner build --delete-conflicting-outputs
+          echo "✅ Mocks generated successfully"
+
       - name: Analyze
         working-directory: flutter
         run: flutter analyze --no-fatal-infos
