@@ -1,7 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mycoach/utils/validators.dart';
+import '../test_helper.dart';
 
 void main() {
+  setUpAll(() {
+    initializeTestEnvironment();
+  });
   group('Validators', () {
     group('email', () {
       test('should return null for valid emails', () {

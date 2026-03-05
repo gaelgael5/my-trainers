@@ -8,12 +8,15 @@ import 'package:mycoach/screens/login_screen.dart';
 import 'package:mycoach/providers/auth_provider.dart';
 import 'package:mycoach/constants/app_theme.dart';
 import 'package:mycoach/widgets/custom_text_field.dart';
-
+import '../test_helper.dart';
 
 import 'login_screen_test.mocks.dart';
 
 @GenerateMocks([AuthProvider])
 void main() {
+  setUpAll(() {
+    initializeTestEnvironment();
+  });
   late MockAuthProvider mockAuthProvider;
 
   setUp(() {

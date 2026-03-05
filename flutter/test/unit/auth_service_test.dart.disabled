@@ -10,9 +10,13 @@ import 'package:mycoach/models/api_response.dart';
 import 'package:mycoach/models/user.dart';
 
 import 'auth_service_test.mocks.dart';
+import '../test_helper.dart';
 
 @GenerateMocks([ApiService, StorageService])
 void main() {
+  setUpAll(() {
+    initializeTestEnvironment();
+  });
   late AuthService authService;
   late MockApiService mockApiService;
   late MockStorageService mockStorageService;

@@ -45,7 +45,6 @@ class CustomTextField extends StatefulWidget {
 
 class _CustomTextFieldState extends State<CustomTextField> {
   bool _obscureText = true;
-  bool _isFocused = false;
   
   @override
   Widget build(BuildContext context) {
@@ -60,13 +59,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         const SizedBox(height: AppDimensions.paddingS),
         
         // Champ de saisie
-        Focus(
-          onFocusChange: (hasFocus) {
-            setState(() {
-              _isFocused = hasFocus;
-            });
-          },
-          child: TextFormField(
+        TextFormField(
             controller: widget.controller,
             obscureText: widget.isPassword ? _obscureText : false,
             keyboardType: widget.keyboardType,
@@ -96,7 +89,6 @@ class _CustomTextFieldState extends State<CustomTextField> {
               ),
             ),
           ),
-        ),
       ],
     );
   }
