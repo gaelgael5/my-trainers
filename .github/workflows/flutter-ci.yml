@@ -104,7 +104,12 @@ jobs:
         timeout-minutes: 5
         run: |
           echo "🧪 Running Flutter tests (without coverage)..."
-          flutter test --dart-define=ENV=test --dart-define=API_BASE_URL=http://localhost:8000 --timeout=30s --concurrency=1
+          echo "📋 Available test files:"
+          find test -name "*.dart" | grep -v ".mocks.dart"
+          echo "🔧 Running pub get again to ensure test dependencies..."
+          flutter pub get
+          echo "🧪 Starting tests with verbose output..."
+          flutter test --dart-define=ENV=test --dart-define=API_BASE_URL=http://localhost:8000 --timeout=30s --concurrency=1 --verbose
           echo "✅ Tests completed successfully"
 
       - name: Run tests with coverage
