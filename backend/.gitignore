@@ -1,0 +1,30 @@
+# Test databases
+*.db
+test.db
+mycoach_test.db
+
+# Environment variables
+.env.local
+.env.test.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
