@@ -1,24 +1,149 @@
+# MyCoach Prometheus Configuration
+# Monitoring and metrics collection for all services
+
 global:
   scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'mycoach-dev'
+    environment: 'development'
 
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "alert_rules.yml"
+
+# Scrape configuration
 scrape_configs:
+  # ═══════════════════════════════════════════════════════════════
+  # 🔍 Prometheus Self-Monitoring
+  # ═══════════════════════════════════════════════════════════════
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metrics_path: /metrics
 
-  - job_name: 'mytrainer-backend'
+  # ═══════════════════════════════════════════════════════════════
+  # 🐍 Backend API Metrics
+  # ═══════════════════════════════════════════════════════════════
+  - job_name: 'mycoach-backend'
     static_configs:
       - targets: ['backend:8000']
-    metrics_path: '/metrics'
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    honor_labels: true
+    params:
+      format: ['prometheus']
 
-  - job_name: 'postgres'
-    static_configs:
-      - targets: ['db:5432']
-
-  - job_name: 'redis'
-    static_configs:
-      - targets: ['redis:6379']
-
+  # ═══════════════════════════════════════════════════════════════
+  # 🌐 NGINX Metrics (via nginx-prometheus-exporter)
+  # ═══════════════════════════════════════════════════════════════
   - job_name: 'nginx'
     static_configs:
-      - targets: ['nginx:80']
+      - targets: ['nginx-exporter:9113']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # ═══════════════════════════════════════════════════════════════
+  # 🗄️ PostgreSQL Metrics (via postgres-exporter)
+  # ═══════════════════════════════════════════════════════════════
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # ═══════════════════════════════════════════════════════════════
+  # 🗃️ Redis Metrics (via redis-exporter)
+  # ═══════════════════════════════════════════════════════════════
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # ═══════════════════════════════════════════════════════════════
+  # 💻 Node/System Metrics (via node-exporter)
+  # ═══════════════════════════════════════════════════════════════
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # ═══════════════════════════════════════════════════════════════
+  # 🐳 Docker Container Metrics (via cAdvisor)
+  # ═══════════════════════════════════════════════════════════════
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # ═══════════════════════════════════════════════════════════════
+  # 🔍 Blackbox Monitoring (External endpoints)
+  # ═══════════════════════════════════════════════════════════════
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - https://api.my-trainers.app/health
+          - https://my-trainers.app
+          - http://backend:8000/health
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: 'blackbox-tcp'
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets:
+          - database:5432
+          - redis:6379
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # ═══════════════════════════════════════════════════════════════
+  # 📱 Custom Application Metrics
+  # ═══════════════════════════════════════════════════════════════
+  - job_name: 'mycoach-custom-metrics'
+    static_configs:
+      - targets: ['backend:8000']
+    scrape_interval: 60s
+    metrics_path: /api/metrics/custom
+    honor_labels: true
+    params:
+      format: ['prometheus']
+
+# ═══════════════════════════════════════════════════════════════
+# 🚨 Remote Write (for production monitoring)
+# ═══════════════════════════════════════════════════════════════
+# remote_write:
+#   - url: "https://prometheus.my-trainers.app/api/v1/write"
+#     basic_auth:
+#       username: "prometheus"
+#       password: "${PROMETHEUS_REMOTE_PASSWORD}"
+#     write_relabel_configs:
+#       - source_labels: [__name__]
+#         regex: "mycoach_.*"
+#         action: keep

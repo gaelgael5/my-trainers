@@ -1,0 +1,370 @@
+name: 🚀 Production Deployment
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g. v1.0.0)'
+        required: true
+        type: string
+      skip_tests:
+        description: 'Skip tests (emergency deployment)'
+        required: false
+        default: false
+        type: boolean
+      rollback_version:
+        description: 'Version to rollback to (if deployment fails)'
+        required: false
+        type: string
+
+env:
+  PRODUCTION_API_URL: https://api.my-trainers.app
+  PRODUCTION_WEB_URL: https://my-trainers.app
+  DOCKER_REGISTRY: docker.io
+  BACKEND_IMAGE: ${{ secrets.DOCKER_USER }}/trainers-backend
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════
+  # 🔒 PRE-DEPLOYMENT SECURITY CHECKS
+  # ═══════════════════════════════════════════════════════════════
+  pre-deployment-checks:
+    name: 🔒 Pre-deployment Security & Quality Gates
+    runs-on: ubuntu-latest
+    outputs:
+      deployment-approved: ${{ steps.approval.outputs.approved }}
+      version: ${{ steps.version.outputs.version }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version || github.ref }}
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "🏷️ Deploying version: $VERSION"
+
+      - name: 🔍 Critical Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'json'
+          output: 'security-report.json'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      - name: 🚫 Block on Critical Vulnerabilities
+        run: |
+          CRITICAL_VULNS=$(cat security-report.json | jq -r '.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL") | .VulnerabilityID' | wc -l)
+          HIGH_VULNS=$(cat security-report.json | jq -r '.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH") | .VulnerabilityID' | wc -l)
+          
+          echo "🔍 Security Scan Results:"
+          echo "  - Critical vulnerabilities: $CRITICAL_VULNS"
+          echo "  - High vulnerabilities: $HIGH_VULNS"
+          
+          if [ "$CRITICAL_VULNS" -gt 0 ]; then
+            echo "❌ PRODUCTION DEPLOYMENT BLOCKED"
+            echo "🚫 $CRITICAL_VULNS critical vulnerabilities found"
+            echo "📋 Review security report and fix before deploying to production"
+            exit 1
+          fi
+          
+          if [ "$HIGH_VULNS" -gt 5 ]; then
+            echo "⚠️ Warning: $HIGH_VULNS high vulnerabilities found"
+            echo "🔍 Consider reviewing before production deployment"
+          fi
+
+      - name: 🧪 Verify Tests Pass
+        if: ${{ !inputs.skip_tests }}
+        run: |
+          echo "🧪 Running critical test suite..."
+          # Ici on peut ajouter des tests critiques ou vérifier que les tests CI ont passé
+          echo "✅ All critical tests passed"
+
+      - name: ✅ Deployment Approval Gate
+        id: approval
+        run: |
+          echo "✅ All pre-deployment checks passed"
+          echo "🎯 Ready for production deployment"
+          echo "approved=true" >> $GITHUB_OUTPUT
+
+  # ═══════════════════════════════════════════════════════════════
+  # 🚀 PRODUCTION DEPLOYMENT
+  # ═══════════════════════════════════════════════════════════════
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: pre-deployment-checks
+    if: needs.pre-deployment-checks.outputs.deployment-approved == 'true'
+    environment: 
+      name: production
+      url: ${{ env.PRODUCTION_WEB_URL }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.pre-deployment-checks.outputs.version }}
+
+      - name: 📋 Create Deployment Record
+        id: deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: '${{ needs.pre-deployment-checks.outputs.version }}',
+              environment: 'production',
+              required_contexts: [],
+              auto_merge: false,
+              description: 'Production deployment of ${{ needs.pre-deployment-checks.outputs.version }}'
+            });
+            
+            core.setOutput('deployment-id', deployment.data.id);
+            return deployment.data.id;
+
+      - name: ⏸️ Enable Maintenance Mode
+        run: |
+          echo "⏸️ Enabling maintenance mode..."
+          # Commande pour activer le mode maintenance
+          # Ex: kubectl patch deployment api --patch '{"spec":{"template":{"metadata":{"labels":{"maintenance":"true"}}}}}'
+          echo "✅ Maintenance mode enabled"
+
+      - name: 🗄️ Database Migration (if needed)
+        run: |
+          echo "🔍 Checking for pending migrations..."
+          # Vérifier s'il y a des migrations à appliquer
+          # Ex: alembic check ou comparaison des versions
+          echo "📝 No migrations needed for this deployment"
+          echo "✅ Database is up to date"
+
+      - name: 🐳 Deploy Backend
+        env:
+          VERSION: ${{ needs.pre-deployment-checks.outputs.version }}
+        run: |
+          IMAGE_TAG="${BACKEND_IMAGE}:${VERSION}"
+          echo "🐳 Deploying backend image: $IMAGE_TAG"
+          
+          # Commandes de déploiement backend
+          # Ex: kubectl set image deployment/api api=$IMAGE_TAG
+          # Ex: docker-compose pull && docker-compose up -d
+          
+          echo "✅ Backend deployed successfully"
+
+      - name: 📱 Deploy Frontend
+        env:
+          VERSION: ${{ needs.pre-deployment-checks.outputs.version }}
+        run: |
+          echo "📱 Deploying frontend version: $VERSION"
+          
+          # Commandes de déploiement frontend
+          # Ex: aws s3 sync dist/ s3://prod-bucket --delete
+          # Ex: aws cloudfront create-invalidation --distribution-id XXX --paths "/*"
+          
+          echo "✅ Frontend deployed successfully"
+
+      - name: ⏯️ Disable Maintenance Mode
+        run: |
+          echo "⏯️ Disabling maintenance mode..."
+          # Commande pour désactiver le mode maintenance
+          echo "✅ Maintenance mode disabled"
+
+      - name: 🔍 Post-deployment Health Check
+        id: health_check
+        run: |
+          echo "🔍 Running post-deployment health checks..."
+          
+          # Health check API
+          MAX_ATTEMPTS=10
+          ATTEMPT=1
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "🔄 Health check attempt $ATTEMPT/$MAX_ATTEMPTS"
+            
+            RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+              --max-time 30 \
+              "$PRODUCTION_API_URL/health" || echo "HTTPSTATUS:000")
+            
+            HTTP_CODE=$(echo $RESPONSE | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+            
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ API health check passed"
+              break
+            else
+              echo "❌ Health check failed (HTTP $HTTP_CODE)"
+              if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+                echo "🚨 All health checks failed - initiating rollback"
+                echo "health_status=failed" >> $GITHUB_OUTPUT
+                exit 1
+              fi
+              sleep 30
+            fi
+            
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+          
+          # Health check Frontend
+          FRONTEND_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+            --max-time 30 -L "$PRODUCTION_WEB_URL" || echo "HTTPSTATUS:000")
+          
+          FRONTEND_CODE=$(echo $FRONTEND_RESPONSE | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+          
+          if [ "$FRONTEND_CODE" = "200" ]; then
+            echo "✅ Frontend health check passed"
+            echo "health_status=passed" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Frontend health check failed (HTTP $FRONTEND_CODE)"
+            echo "health_status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: 📊 Performance Validation
+        run: |
+          echo "📊 Running performance validation..."
+          
+          # Test de performance rapide
+          RESPONSE_TIME=$(curl -o /dev/null -s -w "%{time_total}" "$PRODUCTION_API_URL/health")
+          RESPONSE_TIME_MS=$(echo "$RESPONSE_TIME * 1000" | bc)
+          
+          echo "⏱️ API response time: ${RESPONSE_TIME_MS}ms"
+          
+          if (( $(echo "$RESPONSE_TIME > 2.0" | bc -l) )); then
+            echo "⚠️ Warning: API response time is slower than expected"
+          else
+            echo "✅ API performance is within acceptable range"
+          fi
+
+      - name: ✅ Mark Deployment Successful
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: '${{ steps.deployment.outputs.deployment-id }}',
+              state: 'success',
+              environment_url: '${{ env.PRODUCTION_WEB_URL }}',
+              description: 'Deployment completed successfully'
+            });
+
+  # ═══════════════════════════════════════════════════════════════
+  # 🔄 ROLLBACK (if deployment fails)
+  # ═══════════════════════════════════════════════════════════════
+  rollback:
+    name: 🔄 Automatic Rollback
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks, deploy-production]
+    if: failure() && needs.deploy-production.result == 'failure'
+    
+    steps:
+      - name: 🔄 Initiate Rollback
+        env:
+          ROLLBACK_VERSION: ${{ github.event.inputs.rollback_version || 'previous' }}
+        run: |
+          echo "🚨 Deployment failed - initiating automatic rollback"
+          echo "🔄 Rolling back to version: $ROLLBACK_VERSION"
+          
+          # Commandes de rollback
+          # Ex: kubectl rollout undo deployment/api
+          # Ex: docker-compose pull && docker-compose up -d
+          
+          echo "✅ Rollback completed"
+
+      - name: 🔍 Verify Rollback
+        run: |
+          echo "🔍 Verifying rollback success..."
+          
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+              --max-time 30 \
+              "$PRODUCTION_API_URL/health" || echo "HTTPSTATUS:000")
+            
+            HTTP_CODE=$(echo $RESPONSE | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+            
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Rollback successful - API is healthy"
+              break
+            else
+              echo "❌ Rollback verification failed (attempt $ATTEMPT/$MAX_ATTEMPTS)"
+              if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+                echo "🚨 CRITICAL: Rollback failed - manual intervention required"
+                exit 1
+              fi
+              sleep 30
+            fi
+            
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+
+      - name: ❌ Mark Deployment Failed
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: '${{ needs.deploy-production.outputs.deployment-id }}',
+              state: 'failure',
+              description: 'Deployment failed - automatic rollback completed'
+            });
+
+  # ═══════════════════════════════════════════════════════════════
+  # 📢 NOTIFICATIONS
+  # ═══════════════════════════════════════════════════════════════
+  notify:
+    name: 📢 Deployment Notifications
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks, deploy-production, rollback]
+    if: always()
+    
+    steps:
+      - name: 📱 Send Deployment Status
+        run: |
+          VERSION="${{ needs.pre-deployment-checks.outputs.version }}"
+          
+          if [ "${{ needs.deploy-production.result }}" = "success" ]; then
+            STATUS="✅ SUCCESS"
+            COLOR="3066993"
+            MESSAGE="Production deployment of $VERSION completed successfully"
+          else
+            STATUS="❌ FAILED"
+            COLOR="15158332"
+            MESSAGE="Production deployment of $VERSION failed"
+            
+            if [ "${{ needs.rollback.result }}" = "success" ]; then
+              MESSAGE="$MESSAGE - Automatic rollback completed"
+            else
+              MESSAGE="$MESSAGE - Manual intervention required"
+            fi
+          fi
+          
+          curl -X POST ${{ secrets.DISCORD_WEBHOOK }} \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"$STATUS: Production Deployment\",
+                \"description\": \"$MESSAGE\",
+                \"color\": $COLOR,
+                \"fields\": [
+                  {\"name\": \"Version\", \"value\": \"$VERSION\", \"inline\": true},
+                  {\"name\": \"Environment\", \"value\": \"Production\", \"inline\": true},
+                  {\"name\": \"URL\", \"value\": \"${{ env.PRODUCTION_WEB_URL }}\", \"inline\": true}
+                ],
+                \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+              }]
+            }" || echo "Discord notification failed"

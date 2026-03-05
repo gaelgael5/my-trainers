@@ -1,0 +1,262 @@
+# MyCoach Development Environment
+# Usage: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # ═══════════════════════════════════════════════════════════════
+  # 🗄️ PostgreSQL Database
+  # ═══════════════════════════════════════════════════════════════
+  database:
+    image: postgres:15-alpine
+    container_name: mycoach-postgres
+    environment:
+      POSTGRES_USER: mycoach_user
+      POSTGRES_PASSWORD: mycoach_dev_password
+      POSTGRES_DB: mycoach_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./database/backup:/backup
+    networks:
+      - mycoach-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mycoach_user -d mycoach_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════════
+  # 🐍 Backend API (FastAPI)
+  # ═══════════════════════════════════════════════════════════════
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: mycoach-backend
+    environment:
+      # Database
+      DATABASE_URL: postgresql://mycoach_user:mycoach_dev_password@database:5432/mycoach_db
+      
+      # API Configuration
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      DEBUG: "true"
+      
+      # Security
+      SECRET_KEY: "dev-secret-key-change-in-production"
+      ALGORITHM: "HS256"
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      
+      # CORS
+      CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+      
+      # External Services
+      REDIS_URL: redis://redis:6379/0
+      
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend_logs:/app/logs
+    networks:
+      - mycoach-network
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  # ═══════════════════════════════════════════════════════════════
+  # 🗃️ Redis (Caching & Sessions)
+  # ═══════════════════════════════════════════════════════════════
+  redis:
+    image: redis:7-alpine
+    container_name: mycoach-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./infrastructure/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - mycoach-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+  # ═══════════════════════════════════════════════════════════════
+  # 🌐 NGINX (Reverse Proxy & Load Balancer)
+  # ═══════════════════════════════════════════════════════════════
+  nginx:
+    image: nginx:alpine
+    container_name: mycoach-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - mycoach-network
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════════
+  # 📊 Monitoring Stack
+  # ═══════════════════════════════════════════════════════════════
+  
+  # Prometheus (Metrics Collection)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mycoach-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - mycoach-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+
+  # Grafana (Dashboards)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mycoach-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - mycoach-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════════
+  # 🛠️ Development Tools
+  # ═══════════════════════════════════════════════════════════════
+  
+  # pgAdmin (Database Administration)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mycoach-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@mycoach.dev
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - mycoach-network
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Mailhog (Email Testing)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mycoach-mailhog
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - mycoach-network
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════════
+  # 🚀 Production Services (disabled by default)
+  # ═══════════════════════════════════════════════════════════════
+  
+  # Backup Service
+  backup:
+    image: postgres:15-alpine
+    container_name: mycoach-backup
+    environment:
+      PGUSER: mycoach_user
+      PGPASSWORD: mycoach_dev_password
+      PGHOST: database
+      PGDATABASE: mycoach_db
+    volumes:
+      - ./database/backup:/backup
+      - ./scripts/backup.sh:/backup.sh:ro
+    networks:
+      - mycoach-network
+    depends_on:
+      database:
+        condition: service_healthy
+    profiles:
+      - backup
+    restart: "no"
+    command: ["sh", "/backup.sh"]
+
+# ═══════════════════════════════════════════════════════════════
+# 📦 VOLUMES
+# ═══════════════════════════════════════════════════════════════
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  backend_logs:
+    driver: local
+  nginx_logs:
+    driver: local
+
+# ═══════════════════════════════════════════════════════════════
+# 🌐 NETWORKS
+# ═══════════════════════════════════════════════════════════════
+networks:
+  mycoach-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24

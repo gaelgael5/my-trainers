@@ -1,0 +1,284 @@
+name: 🔍 Monitoring & Health Checks
+
+on:
+  schedule:
+    # Health check toutes les 15 minutes (pendant les heures de bureau)
+    - cron: '*/15 8-20 * * 1-5'
+    # Health check hourly en dehors des heures de bureau et le weekend  
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to monitor'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+      alert_channel:
+        description: 'Send alerts to Discord'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  TIMEOUT_SECONDS: 30
+  EXPECTED_RESPONSE_TIME_MS: 2000
+
+jobs:
+  health-check:
+    name: 🏥 Health Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: ${{ github.event.inputs.environment && fromJSON(format('["{0}"]', github.event.inputs.environment)) || '["production", "staging"]' }}
+    
+    steps:
+      - name: Setup environment URLs
+        id: setup
+        run: |
+          case "${{ matrix.environment }}" in
+            "production")
+              echo "api_url=https://api.my-trainers.app" >> $GITHUB_OUTPUT
+              echo "web_url=https://my-trainers.app" >> $GITHUB_OUTPUT
+              ;;
+            "staging")
+              echo "api_url=https://api-staging.my-trainers.app" >> $GITHUB_OUTPUT
+              echo "web_url=https://staging.my-trainers.app" >> $GITHUB_OUTPUT
+              ;;
+          esac
+          echo "ENV_NAME=${{ matrix.environment }}" >> $GITHUB_ENV
+
+      - name: 🔍 API Health Check
+        id: api_check
+        run: |
+          API_URL="${{ steps.setup.outputs.api_url }}"
+          echo "🔍 Checking API health: $API_URL/health"
+          
+          # Test avec curl et mesure du temps de réponse
+          START_TIME=$(date +%s%3N)
+          
+          RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code};TIME:%{time_total}" \
+            --max-time ${{ env.TIMEOUT_SECONDS }} \
+            "$API_URL/health" || echo "HTTPSTATUS:000;TIME:0")
+          
+          END_TIME=$(date +%s%3N)
+          RESPONSE_TIME=$((END_TIME - START_TIME))
+          
+          HTTP_CODE=$(echo $RESPONSE | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+          CURL_TIME=$(echo $RESPONSE | grep -o "TIME:[0-9.]*" | cut -d: -f2)
+          RESPONSE_BODY=$(echo $RESPONSE | sed -E 's/HTTPSTATUS:[0-9]*;TIME:[0-9.]*$//')
+          
+          echo "📊 HTTP Code: $HTTP_CODE"
+          echo "📊 Response Time: ${RESPONSE_TIME}ms (curl: ${CURL_TIME}s)"
+          echo "📊 Response: $RESPONSE_BODY"
+          
+          # Validation
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ API is healthy"
+            echo "status=healthy" >> $GITHUB_OUTPUT
+          else
+            echo "❌ API is unhealthy (HTTP $HTTP_CODE)"
+            echo "status=unhealthy" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check response time
+          if [ "$RESPONSE_TIME" -gt "${{ env.EXPECTED_RESPONSE_TIME_MS }}" ]; then
+            echo "⚠️ Slow response time: ${RESPONSE_TIME}ms > ${{ env.EXPECTED_RESPONSE_TIME_MS }}ms"
+            echo "performance=slow" >> $GITHUB_OUTPUT
+          else
+            echo "performance=good" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
+          echo "response_time=$RESPONSE_TIME" >> $GITHUB_OUTPUT
+
+      - name: 🗄️ Database Connectivity Check
+        id: db_check
+        run: |
+          API_URL="${{ steps.setup.outputs.api_url }}"
+          echo "🔍 Checking database connectivity: $API_URL/db-health"
+          
+          RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+            --max-time ${{ env.TIMEOUT_SECONDS }} \
+            "$API_URL/db-health" || echo "HTTPSTATUS:000")
+          
+          HTTP_CODE=$(echo $RESPONSE | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Database is accessible"
+            echo "status=healthy" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Database connection failed (HTTP $HTTP_CODE)"
+            echo "status=unhealthy" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📱 Frontend Availability Check  
+        id: frontend_check
+        run: |
+          WEB_URL="${{ steps.setup.outputs.web_url }}"
+          echo "🔍 Checking frontend: $WEB_URL"
+          
+          RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+            --max-time ${{ env.TIMEOUT_SECONDS }} \
+            -L "$WEB_URL" || echo "HTTPSTATUS:000")
+          
+          HTTP_CODE=$(echo $RESPONSE | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Frontend is accessible"
+            echo "status=healthy" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Frontend is inaccessible (HTTP $HTTP_CODE)"  
+            echo "status=unhealthy" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🔒 SSL Certificate Check
+        id: ssl_check
+        run: |
+          API_DOMAIN=$(echo "${{ steps.setup.outputs.api_url }}" | sed 's|https\?://||' | cut -d'/' -f1)
+          WEB_DOMAIN=$(echo "${{ steps.setup.outputs.web_url }}" | sed 's|https\?://||' | cut -d'/' -f1)
+          
+          check_ssl() {
+            local domain=$1
+            local name=$2
+            
+            EXPIRY=$(echo | timeout 10 openssl s_client -servername $domain -connect $domain:443 2>/dev/null | \
+              openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)
+            
+            if [ -n "$EXPIRY" ]; then
+              EXPIRY_EPOCH=$(date -d "$EXPIRY" +%s)
+              NOW_EPOCH=$(date +%s)
+              DAYS_UNTIL_EXPIRY=$(( (EXPIRY_EPOCH - NOW_EPOCH) / 86400 ))
+              
+              if [ $DAYS_UNTIL_EXPIRY -lt 30 ]; then
+                echo "⚠️ $name SSL certificate expires in $DAYS_UNTIL_EXPIRY days ($EXPIRY)"
+                echo "${name}_ssl=warning" >> $GITHUB_OUTPUT
+              else
+                echo "✅ $name SSL certificate valid for $DAYS_UNTIL_EXPIRY days"
+                echo "${name}_ssl=valid" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "❌ Could not check $name SSL certificate"
+              echo "${name}_ssl=error" >> $GITHUB_OUTPUT
+            fi
+          }
+          
+          check_ssl "$API_DOMAIN" "api"
+          check_ssl "$WEB_DOMAIN" "web"
+
+      - name: 📊 Create Status Summary
+        run: |
+          ENV_UPPER=$(echo "$ENV_NAME" | tr '[:lower:]' '[:upper:]')
+          
+          echo "## 🔍 $ENV_UPPER Health Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # API Status
+          if [ "${{ steps.api_check.outputs.status }}" = "healthy" ]; then
+            echo "- 🟢 **API**: Healthy (HTTP ${{ steps.api_check.outputs.http_code }})" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- 🔴 **API**: Unhealthy (HTTP ${{ steps.api_check.outputs.http_code }})" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "  - Response Time: ${{ steps.api_check.outputs.response_time }}ms" >> $GITHUB_STEP_SUMMARY
+          
+          # Database Status
+          if [ "${{ steps.db_check.outputs.status }}" = "healthy" ]; then
+            echo "- 🟢 **Database**: Accessible" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- 🔴 **Database**: Connection Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Frontend Status
+          if [ "${{ steps.frontend_check.outputs.status }}" = "healthy" ]; then
+            echo "- 🟢 **Frontend**: Accessible" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- 🔴 **Frontend**: Inaccessible" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # SSL Status
+          echo "- 🔒 **SSL Certificates**:" >> $GITHUB_STEP_SUMMARY
+          echo "  - API: ${{ steps.ssl_check.outputs.api_ssl }}" >> $GITHUB_STEP_SUMMARY  
+          echo "  - Web: ${{ steps.ssl_check.outputs.web_ssl }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🚨 Alert on Failure
+        if: >
+          steps.api_check.outputs.status == 'unhealthy' ||
+          steps.db_check.outputs.status == 'unhealthy' || 
+          steps.frontend_check.outputs.status == 'unhealthy' ||
+          steps.ssl_check.outputs.api_ssl == 'warning' ||
+          steps.ssl_check.outputs.web_ssl == 'warning'
+        env:
+          ALERT_ENABLED: ${{ github.event.inputs.alert_channel != 'false' }}
+        run: |
+          if [ "$ALERT_ENABLED" = "true" ]; then
+            # Construire le message d'alerte
+            ALERT_MESSAGE="🚨 **MyCoach $ENV_NAME Health Alert**\n\n"
+            
+            if [ "${{ steps.api_check.outputs.status }}" = "unhealthy" ]; then
+              ALERT_MESSAGE+="\n❌ API is down (HTTP ${{ steps.api_check.outputs.http_code }})"
+            fi
+            
+            if [ "${{ steps.db_check.outputs.status }}" = "unhealthy" ]; then
+              ALERT_MESSAGE+="\n❌ Database connection failed"
+            fi
+            
+            if [ "${{ steps.frontend_check.outputs.status }}" = "unhealthy" ]; then
+              ALERT_MESSAGE+="\n❌ Frontend is inaccessible"
+            fi
+            
+            if [ "${{ steps.ssl_check.outputs.api_ssl }}" = "warning" ] || [ "${{ steps.ssl_check.outputs.web_ssl }}" = "warning" ]; then
+              ALERT_MESSAGE+="\n⚠️ SSL certificate expiring soon"
+            fi
+            
+            ALERT_MESSAGE+="\n\n🕐 **Time**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            ALERT_MESSAGE+="\n🔗 **Environment**: ${{ matrix.environment }}"
+            
+            # Envoyer notification Discord
+            curl -X POST ${{ secrets.DISCORD_WEBHOOK }} \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"embeds\": [{
+                  \"title\": \"🚨 Health Check Alert - $ENV_NAME\",
+                  \"description\": \"$ALERT_MESSAGE\",
+                  \"color\": 15158332,
+                  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
+                  \"footer\": {\"text\": \"MyCoach Monitoring\"}
+                }]
+              }" || echo "Discord notification failed"
+          fi
+
+  # ═══════════════════════════════════════════════════════════════  
+  # 📈 PERFORMANCE MONITORING
+  # ═══════════════════════════════════════════════════════════════
+  performance-test:
+    name: 📈 Performance Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: 🏃‍♂️ Load Test with Apache Bench
+        run: |
+          sudo apt-get update && sudo apt-get install -y apache2-utils
+          
+          API_URL="https://api.my-trainers.app/health"
+          echo "🏃‍♂️ Running load test: $API_URL"
+          
+          # 100 requêtes, 10 concurrent
+          ab -n 100 -c 10 -g performance.dat "$API_URL" > performance_results.txt
+          
+          echo "## 📈 Performance Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          cat performance_results.txt >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Performance Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-results-${{ github.run_number }}
+          path: |
+            performance_results.txt
+            performance.dat
+          retention-days: 7
