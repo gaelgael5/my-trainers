@@ -87,7 +87,7 @@ class ProfileService:
             )
 
         # Mise à jour des champs non-None uniquement
-        for field, value in profile_data.dict(exclude_unset=True).items():
+        for field, value in profile_data.model_dump(exclude_unset=True).items():
             setattr(db_profile, field, value)
 
         db.commit()

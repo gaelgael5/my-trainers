@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 
 from sqlalchemy import (Boolean, Column, DateTime, Enum, ForeignKey, Integer,
-                        String, Text)
+                        String, Text, Float, Table)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -12,6 +12,14 @@ from .database import Base
 class UserType(enum.Enum):
     CLIENT = "CLIENT"
     COACH = "COACH"
+
+
+class SessionStatus(enum.Enum):
+    SCHEDULED = "SCHEDULED"
+    CONFIRMED = "CONFIRMED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
 
 
 class User(Base):
@@ -27,6 +35,10 @@ class User(Base):
 
     # Relations
     profile = relationship("Profile", back_populates="user", uselist=False)
+    # Sessions en tant que client
+    client_sessions = relationship("Session", foreign_keys="Session.client_id", back_populates="client")
+    # Sessions en tant que coach
+    coach_sessions = relationship("Session", foreign_keys="Session.coach_id", back_populates="coach")
 
 
 class Profile(Base):
@@ -45,6 +57,7 @@ class Profile(Base):
     certifications = Column(Text)  # JSON ou texte avec certifications
     specializations = Column(Text)  # JSON ou texte avec spécialisations
     experience_years = Column(Integer)
+    hourly_rate = Column(Float)  # Prix par heure
 
     # Métadonnées
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -71,3 +84,41 @@ class Gym(Base):
     # Métadonnées
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relations
+    sessions = relationship("Session", back_populates="gym")
+
+
+class Session(Base):
+    __tablename__ = "sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Participants
+    client_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    coach_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # Lieu
+    gym_id = Column(Integer, ForeignKey("gyms.id"), nullable=True)  # Peut être null pour sessions domicile
+    
+    # Planning
+    scheduled_at = Column(DateTime(timezone=True), nullable=False)
+    duration_minutes = Column(Integer, default=60)
+    
+    # Statut et détails
+    status = Column(Enum(SessionStatus), default=SessionStatus.SCHEDULED)
+    title = Column(String(200), nullable=False)
+    description = Column(Text)
+    price = Column(Float)  # Prix de la session
+    
+    # Notes privées du coach
+    coach_notes = Column(Text)  # Visible seulement par le coach
+    
+    # Métadonnées
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relations
+    client = relationship("User", foreign_keys=[client_id], back_populates="client_sessions")
+    coach = relationship("User", foreign_keys=[coach_id], back_populates="coach_sessions")
+    gym = relationship("Gym", back_populates="sessions")
