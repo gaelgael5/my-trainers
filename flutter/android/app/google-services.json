@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:320022309385:android:bc7af5200bebdd4b13e6d8",
+        "mobilesdk_app_id": "1:320022309385:android:838aa805fc59ee1d13e6d8",
         "android_client_info": {
-          "package_name": "com.mycoach.app"
+          "package_name": "com.mytrainers.app"
         }
       },
       "oauth_client": [],

@@ -37,6 +37,9 @@ async def register(user_data: schemas.UserRegister, db: Session = Depends(get_db
     try:
         db_user = services.UserService.create_user(db, user_data)
         return db_user
+    except HTTPException:
+        # Re-lever les HTTPException sans modification
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

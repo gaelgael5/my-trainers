@@ -167,7 +167,7 @@ jobs:
         if: github.ref_name == 'dev'
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: "1:320022309385:android:bc7af5200bebdd4b13e6d8"
+          appId: "1:320022309385:android:838aa805fc59ee1d13e6d8"
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           groups: testers
           file: flutter/build/app/outputs/flutter-apk/app-debug.apk
@@ -178,7 +178,7 @@ jobs:
         if: github.ref_name == 'uat'
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: "1:320022309385:android:bc7af5200bebdd4b13e6d8"
+          appId: "1:320022309385:android:838aa805fc59ee1d13e6d8"
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           groups: testers
           file: flutter/build/app/outputs/flutter-apk/app-release.apk
